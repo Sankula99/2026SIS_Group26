@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "FOMO \u2013 Uni Social Timetable",
+  "short_name": "FOMO",
+  "version": "0.1.0",
+  "description": "See friends in classes, find shared free time, and organise meetups without giving up timetable privacy.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "FOMO",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

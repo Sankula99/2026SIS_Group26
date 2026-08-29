@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Allocate+ Timetable Demo</title>
+  <link rel="stylesheet" href="demo.css" />
+</head>
+<body>
+  <header class="demo-header">
+    <div>
+      <span class="uni-mark">U</span>
+      <div>
+        <strong>University Timetable</strong>
+        <small>Allocate+ concept demo</small>
+      </div>
+    </div>
+    <span class="semester">Spring 2026</span>
+  </header>
+
+  <main>
+    <div class="notice">
+      <strong>FOMO demo environment</strong>
+      <span>This page is included only to demonstrate how friend indicators could appear inside Allocate+.</span>
+    </div>
+
+    <div class="page-title">
+      <div>
+        <p>Allocate activities</p>
+        <h1>DATA2001 · Data Systems</h1>
+      </div>
+      <button>View timetable</button>
+    </div>
+
+    <section class="activity-group">
+      <div class="group-title">
+        <div>
+          <span class="tag">WORKSHOP</span>
+          <h2>Select your preferred activity</h2>
+        </div>
+        <span>1 required</span>
+      </div>
+
+      <article class="session">
+        <label><input type="radio" name="session" /> <span></span></label>
+        <div class="session-main">
+          <strong>Workshop 01</strong>
+          <p>Monday · 9:00 AM–11:00 AM · Parramatta South</p>
+        </div>
+        <div class="fomo-pill neutral">
+          <span class="faces">NO</span>
+          <div><strong>1 friend</strong><small>Noah</small></div>
+        </div>
+      </article>
+
+      <article class="session highlighted">
+        <label><input type="radio" name="session" checked /> <span></span></label>
+        <div class="session-main">
+          <strong>Workshop 02</strong>
+          <p>Tuesday · 10:00 AM–12:00 PM · Parramatta South</p>
+        </div>
+        <div class="fomo-pill">
+          <span class="mini-stack"><i>MY</i><i>PR</i><i>ZO</i></span>
+          <div><strong>3 friends</strong><small>Maya · Priya · Zoe</small></div>
+        </div>
+      </article>
+
+      <article class="session">
+        <label><input type="radio" name="session" /> <span></span></label>
+        <div class="session-main">
+          <strong>Workshop 03</strong>
+          <p>Thursday · 3:00 PM–5:00 PM · Online</p>
+        </div>
+        <div class="fomo-pill neutral">
+          <span class="faces">—</span>
+          <div><strong>No friends yet</strong><small>Your choice stays yours</small></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="privacy-note">
+      <span>◎</span>
+      <div>
+        <strong>Privacy by default</strong>
+        <p>Friend indicators only use timetable information that each friend has chosen to share.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="demo.js"></script>
+</body>
+</html>
