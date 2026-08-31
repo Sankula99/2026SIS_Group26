@@ -1,3 +1,13 @@
+import {
+  signOut,
+  getCurrentUser,
+  sendLoginOtp,
+  sendSignupOtp,
+  verifyEmailOtp,
+  getProfile,
+  upsertProfile
+} from "./src/lib/supabase.js";
+
 const MOCK = {
   friends: [
     { name: "Maya", initials: "MY", status: "DATA2001 · Workshop 02" },
@@ -37,28 +47,63 @@ let state = {
   friendNotifications: true,
   notificationCount: 2,
   currentTab: null,
-  isAllocate: false
+  isAllocate: false,
+  authView: "login",
+  email: "",
+  otpPurpose: "login",
+  otpCode: "",
+  user: null,
+  authLoading: false,
+  authError: ""
 };
 
 document.addEventListener("DOMContentLoaded", init);
 
+function persistAuthProgress() {
+  return chrome.storage.local.set({
+    email: state.email,
+    authView: state.authView,
+    otpPurpose: state.otpPurpose
+  });
+}
+
 function init() {
+  chrome.storage.local.remove(["password", "mfaEnabled"]);
   chrome.storage.local.get({
     timetableSharing: true,
     meetupNotifications: true,
     classNotifications: true,
     friendNotifications: true,
-    notificationCount: 2
-  }, (saved) => {
+    notificationCount: 2,
+    email: "",
+    authView: "login",
+    otpPurpose: "login"
+  }, async (saved) => {
     Object.assign(state, saved);
+    delete state.password;
+    delete state.mfaEnabled;
+    delete state.mfaCode;
+    delete state.mfaSent;
     updateNotificationBadge();
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       state.currentTab = tabs?.[0] || null;
       const haystack = `${state.currentTab?.url || ""} ${state.currentTab?.title || ""}`;
       state.isAllocate = /allocate\+?|timetable|class.?registration/i.test(haystack);
-      render();
     });
+
+    const user = await getCurrentUser();
+    state.user = user || null;
+    if (user) {
+      state.authView = "home";
+    } else if (saved.authView === "otp" && isValidEmail(saved.email)) {
+      state.authView = "otp";
+      state.otpPurpose = saved.otpPurpose === "signup" ? "signup" : "login";
+      state.email = saved.email;
+    } else {
+      state.authView = saved.authView === "signup" ? "signup" : "login";
+    }
+    render();
   });
 
   document.getElementById("homeBtn").addEventListener("click", () => go("home"));
@@ -72,6 +117,19 @@ function go(view) {
 }
 
 function render() {
+  if (!state.user) {
+    if (state.authView === "signup") {
+      renderSignup();
+      return;
+    }
+    if (state.authView === "otp") {
+      renderOtp();
+      return;
+    }
+    renderLogin();
+    return;
+  }
+
   const renderers = {
     home: renderHome,
     friends: renderFriends,
@@ -244,17 +302,26 @@ function renderSettings() {
     <div class="settings-group">
       <div class="settings-line">
         <div>
-          <strong>Per-friend visibility</strong>
-          <small>Prototype destination for silent timetable hiding</small>
+          <strong>Account</strong>
+          <small>${state.user ? escapeHtml(state.user.email || "") : "Not signed in"}</small>
         </div>
-        <span class="trailing">›</span>
+        ${state.user ? `<button class="secondary-btn" id="logoutBtn" style="height:30px;border-radius:8px;font-size:9px;font-weight:800;">Sign out</button>` : ""}
       </div>
     </div>
   `;
   wireBack();
   content.querySelectorAll("[data-setting]").forEach(button => {
-    button.addEventListener("click", () => toggleSetting(button.dataset.setting));
+    button.addEventListener("click", () => {
+      toggleSetting(button.dataset.setting);
+    });
   });
+
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await handleLogout();
+    });
+  }
 }
 
 function renderNotifications() {
@@ -273,6 +340,269 @@ function renderNotifications() {
     </div>
   `;
   wireBack();
+}
+
+function renderLogin() {
+  content.innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="auth-header">
+          <span class="brand-mark">F</span>
+          <div>
+            <strong>Welcome back</strong>
+            <small>We'll email you a sign-in code</small>
+          </div>
+        </div>
+        ${state.authError ? `<div class="auth-error">${escapeHtml(state.authError)}</div>` : ""}
+        <div class="auth-field">
+          <label for="loginEmail">Email</label>
+          <input id="loginEmail" type="email" value="${escapeHtml(state.email)}" placeholder="you@uni.edu.au" autocomplete="email" ${state.authLoading ? "disabled" : ""} />
+        </div>
+        <button class="primary-btn auth-submit" id="loginSubmit" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? "Sending code..." : "Send sign-in code"}</button>
+        <button class="link-btn" id="goSignup">Create an account</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("loginSubmit").addEventListener("click", handleLogin);
+  document.getElementById("loginEmail").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") handleLogin();
+  });
+  document.getElementById("goSignup").addEventListener("click", () => {
+    state.authView = "signup";
+    state.authError = "";
+    persistAuthProgress();
+    render();
+  });
+}
+
+function renderSignup() {
+  content.innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="auth-header">
+          <span class="brand-mark">F</span>
+          <div>
+            <strong>Create account</strong>
+            <small>Join FOMO with your uni email</small>
+          </div>
+        </div>
+        ${state.authError ? `<div class="auth-error">${escapeHtml(state.authError)}</div>` : ""}
+        <div class="auth-field">
+          <label for="signupEmail">Email</label>
+          <input id="signupEmail" type="email" value="${escapeHtml(state.email)}" placeholder="you@uni.edu.au" autocomplete="email" ${state.authLoading ? "disabled" : ""} />
+        </div>
+        <button class="primary-btn auth-submit" id="signupSubmit" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? "Sending code..." : "Send verification code"}</button>
+        <button class="link-btn" id="goLogin">Already have an account? Sign in</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("signupSubmit").addEventListener("click", handleSignup);
+  document.getElementById("signupEmail").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") handleSignup();
+  });
+  document.getElementById("goLogin").addEventListener("click", () => {
+    state.authView = "login";
+    state.authError = "";
+    persistAuthProgress();
+    render();
+  });
+}
+
+function renderOtp() {
+  const otpTitle = state.otpPurpose === "signup" ? "Verify your email" : "Check your email";
+  content.innerHTML = `
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="auth-header">
+          <span class="brand-mark">F</span>
+          <div>
+            <strong>${otpTitle}</strong>
+            <small>Enter the 6-digit code sent to ${escapeHtml(state.email || "your email")}</small>
+          </div>
+        </div>
+        ${state.authError ? `<div class="auth-error">${escapeHtml(state.authError)}</div>` : ""}
+        <div class="auth-field">
+          <label for="otpCodeInput">Code</label>
+          <input id="otpCodeInput" type="text" inputmode="numeric" maxlength="8" placeholder="123456" autocomplete="one-time-code" value="${escapeHtml(state.otpCode)}" ${state.authLoading ? "disabled" : ""} />
+        </div>
+        <button class="primary-btn auth-submit" id="otpVerifyBtn" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? "Verifying..." : "Verify"}</button>
+        <button class="link-btn" id="otpResendBtn" ${state.authLoading ? "disabled" : ""}>Resend code</button>
+        <button class="link-btn" id="otpBackBtn">Use a different email</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("otpVerifyBtn").addEventListener("click", handleOtpVerify);
+  document.getElementById("otpCodeInput").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") handleOtpVerify();
+  });
+  document.getElementById("otpResendBtn").addEventListener("click", handleOtpResend);
+  document.getElementById("otpBackBtn").addEventListener("click", () => {
+    state.authView = state.otpPurpose === "signup" ? "signup" : "login";
+    state.authError = "";
+    persistAuthProgress();
+    render();
+  });
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+async function sendAuthOtp(purpose) {
+  const send = purpose === "signup" ? sendSignupOtp : sendLoginOtp;
+  const { error } = await send(state.email);
+  if (error) {
+    const message = error.message || "Could not send the verification code.";
+    if (purpose === "login" && /signup|not (found|registered)|does not exist/i.test(message)) {
+      return "No account found for that email. Create an account first.";
+    }
+    return message;
+  }
+  return null;
+}
+
+async function handleSignup() {
+  const email = document.getElementById("signupEmail")?.value?.trim() || "";
+  if (!isValidEmail(email)) {
+    state.authError = "Please enter a valid email address.";
+    render();
+    return;
+  }
+
+  state.email = email;
+  state.otpPurpose = "signup";
+  state.authView = "otp";
+  state.authLoading = true;
+  state.authError = "";
+  await persistAuthProgress();
+  render();
+
+  const errorMessage = await sendAuthOtp("signup");
+  state.authLoading = false;
+  if (errorMessage) {
+    state.authError = errorMessage;
+    state.authView = "signup";
+    await persistAuthProgress();
+    render();
+    return;
+  }
+
+  showToast("Verification code sent to your email.");
+  render();
+}
+
+async function handleLogin() {
+  const email = document.getElementById("loginEmail")?.value?.trim() || "";
+  if (!isValidEmail(email)) {
+    state.authError = "Please enter a valid email address.";
+    render();
+    return;
+  }
+
+  state.email = email;
+  state.otpPurpose = "login";
+  state.authView = "otp";
+  state.authLoading = true;
+  state.authError = "";
+  await persistAuthProgress();
+  render();
+
+  const errorMessage = await sendAuthOtp("login");
+  state.authLoading = false;
+  if (errorMessage) {
+    state.authError = errorMessage;
+    state.authView = "login";
+    await persistAuthProgress();
+    render();
+    return;
+  }
+
+  showToast("Sign-in code sent to your email.");
+  render();
+}
+
+async function handleOtpVerify() {
+  const token = (document.getElementById("otpCodeInput")?.value || "").replace(/\s+/g, "");
+  state.otpCode = token;
+  if (!token) {
+    state.authError = "Please enter the verification code.";
+    render();
+    return;
+  }
+
+  state.authLoading = true;
+  state.authError = "";
+  render();
+
+  const { data, error } = await verifyEmailOtp(state.email, token);
+  state.authLoading = false;
+
+  if (error || !data?.user) {
+    state.authError = error?.message || "Invalid or expired code.";
+    render();
+    return;
+  }
+
+  await completeAuth(data.user);
+}
+
+async function handleOtpResend() {
+  if (!isValidEmail(state.email)) {
+    state.authError = "Please enter a valid email address.";
+    state.authView = state.otpPurpose === "signup" ? "signup" : "login";
+    persistAuthProgress();
+    render();
+    return;
+  }
+
+  state.authLoading = true;
+  state.authError = "";
+  await persistAuthProgress();
+  render();
+
+  const errorMessage = await sendAuthOtp(state.otpPurpose);
+  state.authLoading = false;
+  if (errorMessage) {
+    state.authError = errorMessage;
+    persistAuthProgress();
+    render();
+    return;
+  }
+
+  persistAuthProgress();
+  showToast("A new code was sent to your email.");
+  render();
+}
+
+async function completeAuth(user) {
+  state.user = user;
+  state.view = "home";
+  state.authView = "home";
+  state.authError = "";
+  state.otpCode = "";
+
+  const { data: profile } = await getProfile(user.id);
+  if (!profile) {
+    await upsertProfile({ id: user.id, email: user.email });
+  }
+
+  await persistAuthProgress();
+  showToast("Signed in successfully.");
+  render();
+}
+
+async function handleLogout() {
+  await signOut();
+  state.user = null;
+  state.authView = "login";
+  state.authError = "";
+  state.otpCode = "";
+  await persistAuthProgress();
+  showToast("Signed out.");
+  render();
 }
 
 function heading(title, subtitle) {
