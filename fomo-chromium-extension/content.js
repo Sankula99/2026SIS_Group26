@@ -2,18 +2,44 @@
   "use strict";
 
   /*
-   * People keyed by the timetable heading and activity ID.
-   * This is prototype data until friend information comes from a backend.
+   * Structure:
+   *
+   *   "<subject/timetable key>": {
+   *     "<person>": {
+   *       "<activity group>": "<activity number>"
+   *     }
+   *   }
+   * 
+   * A person can therefore have one saved activity number for every
+   * activity group in the subject, e.g. Lec1, Tut1, Lab1, etc.
    */
-  const PEOPLE_BY_ACTIVITY = {
+  const PEOPLE = {
     "31005_SPR_U_1_S": {
-      "01": ["Fred"],
-      "02": ["Alice", "Bob"],
-      "03": ["Charlie"],
+      "Fred": {
+        "Lec1": "01",
+        "Tut1": "03",
+        "Lab1": "02"
+      },
+      "Alice": {
+        "Lec1": "02",
+        "Tut1": "03",
+        "Lab1": "01"
+      },
+      "Bob": {
+        "Lec1": "02",
+        "Tut1": "01",
+        "Lab1": "02"
+      }
     },
-    "41030_SPR_U_1_S": {
-      "01": ["Jane", "Sam"],
-    },
+
+    "41129_SPR_U_1_S": {
+      "Jane": {
+        "Wrk1": "01"
+      },
+      "Sam": {
+        "Wrk1": "01"
+      }
+    }
   };
 
   const PEOPLE_HEADER_TEXT = "People";
@@ -22,106 +48,241 @@
 
   let updateScheduled = false;
 
+  /**
+   * Read the timetable key directly from the <h3> inside .desc-text.
+   */
   function getTimetableKey(groupRoot) {
-    return groupRoot.querySelector(".desc-text h3")?.textContent.trim() || null;
-  }
-
-  function getActivityId(row) {
-    const activity = row.querySelector(":scope > td:nth-child(2)")?.textContent.trim();
-    if (activity) {
-      return activity;
+    const heading = groupRoot.querySelector(".desc-text h3");
+    if (!heading) {
+      return null;
     }
 
-    const idParts = row.id?.split("|");
-    return idParts?.length >= 3 ? idParts.at(-1).trim() : null;
+    return heading.textContent.trim();
   }
 
-  function getPeopleText(timetableKey, activityId) {
-    return (PEOPLE_BY_ACTIVITY[timetableKey]?.[activityId] ?? []).join(", ");
+  /**
+   * Get the current activity group, e.g. "Lec1".
+   *
+   * The supplied HTML exposes this directly as:
+   *   <a id="sa_list_ro" ... data-group="Lec1">
+   */
+  function getActivityGroup(groupRoot) {
+    const groupElement = groupRoot.querySelector(
+      "#sa_list_ro[data-group], #sa_grid_ro[data-group], [data-group]"
+    );
+
+    if (groupElement?.dataset.group) {
+      return groupElement.dataset.group.trim();
+    }
+
+    // Fallback - formatted as subject|activityGroup|activityNumber
+    const firstRowWithId = groupRoot.querySelector(
+      "table.aplus-table tbody > tr[id]"
+    );
+
+    if (firstRowWithId?.id) {
+      const parts = firstRowWithId.id.split("|");
+      if (parts.length >= 3 && parts[1].trim()) {
+        return parts[1].trim();
+      }
+    }
+
+    // Final fallback - the activity group is the last non-empty line in .desc-text
+    const description = groupRoot.querySelector(".desc-text");
+    if (description) {
+      const lines = description.innerText
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean);
+
+      if (lines.length >= 2) {
+        return lines[lines.length - 1];
+      }
+    }
+
+    return null;
   }
 
-  function updateTable(groupRoot, table) {
+  /**
+   * Get the Activity ID for a table row.
+   *
+   * The first <td> is the allocation/status icon,
+   * and the second <td> contains the Activity value such as "01".
+   *
+   * If that is unavailable, fall back to the "00001_SPR_U_1_S|Lec1|01" thing
+   */
+  function getActivityId(row) {
+    const cells = row.querySelectorAll(":scope > td");
+
+    if (cells.length >= 2) {
+      const activity = cells[1].textContent.trim();
+      if (activity) {
+        return activity;
+      }
+    }
+
+    if (row.id) {
+      const parts = row.id.split("|");
+      if (parts.length >= 3) {
+        return parts[parts.length - 1].trim();
+      }
+    }
+
+    return null;
+  }
+
+  function formatPeople(timetableKey, activityGroup, activityId) {
+    const subjectPeople = PEOPLE[timetableKey];
+
+    if (!subjectPeople || !activityGroup) {
+      return "";
+    }
+
+    const matchingPeople = Object.entries(subjectPeople)
+      .filter(([, activities]) =>
+        activities?.[activityGroup] === activityId
+      )
+      .map(([person]) => person);
+
+    return matchingPeople.join(", ");
+  }
+
+  function addPeopleColumnToTable(groupRoot, table) {
     const timetableKey = getTimetableKey(groupRoot);
-    const headerRow = table.querySelector("thead tr");
-    if (!timetableKey || !headerRow) {
+    const activityGroup = getActivityGroup(groupRoot);
+
+    if (!timetableKey || !activityGroup) {
       return;
     }
 
-    if (!headerRow.querySelector(`th.${PEOPLE_HEADER_CLASS}`)) {
-      const header = document.createElement("th");
-      header.className = PEOPLE_HEADER_CLASS;
-      header.textContent = PEOPLE_HEADER_TEXT;
-      headerRow.appendChild(header);
+    const headerRow = table.querySelector("thead tr");
+    if (!headerRow) {
+      return;
     }
 
-    for (const row of table.querySelectorAll("tbody > tr")) {
+    // Add the header only once for this particular table.
+    let peopleHeader = headerRow.querySelector(
+      `th.${PEOPLE_HEADER_CLASS}`
+    );
+
+    if (!peopleHeader) {
+      peopleHeader = document.createElement("th");
+      peopleHeader.className = PEOPLE_HEADER_CLASS;
+      peopleHeader.textContent = PEOPLE_HEADER_TEXT;
+
+      // The Description column is the last <th>, so appending puts 'People' directly after it.
+      headerRow.appendChild(peopleHeader);
+    }
+
+    const rows = table.querySelectorAll("tbody > tr");
+
+    for (const row of rows) {
       const activityId = getActivityId(row);
       if (!activityId) {
         continue;
       }
 
-      let cell = row.querySelector(`:scope > td.${PEOPLE_CELL_CLASS}`);
-      if (!cell) {
-        cell = document.createElement("td");
-        cell.className = PEOPLE_CELL_CLASS;
-        row.appendChild(cell);
+      let peopleCell = row.querySelector(
+        `:scope > td.${PEOPLE_CELL_CLASS}`
+      );
+
+      if (!peopleCell) {
+        peopleCell = document.createElement("td");
+        peopleCell.className = PEOPLE_CELL_CLASS;
+        row.appendChild(peopleCell);
       }
 
-      const peopleText = getPeopleText(timetableKey, activityId);
-      if (cell.textContent !== peopleText) {
-        cell.textContent = peopleText;
+      // Only write to the DOM when the value actually changed.
+      //
+      // This is important because #group-tpl is watched by a MutationObserver. Reassigning textContent on every observer pass would itself create another mutation, causing an update loop.
+      const peopleText = formatPeople(
+        timetableKey,
+        activityGroup,
+        activityId
+      );
+
+      if (peopleCell.textContent !== peopleText) {
+        peopleCell.textContent = peopleText;
       }
     }
   }
 
   function updatePeopleColumns() {
-    const groupRoots = document.querySelectorAll("#group-tpl > #group-tpl-RO");
+    /*
+     * There should only be one #group-tpl-RO - but querying by the structural relationship makes this work if there's
+     * more than one in the future for some reason.
+     */
+    const groupRoots = document.querySelectorAll(
+      "#group-tpl > #group-tpl-RO"
+    );
 
     for (const groupRoot of groupRoots) {
-      for (const table of groupRoot.querySelectorAll(".aplus-table-container table.aplus-table")) {
-        updateTable(groupRoot, table);
+      const tables = groupRoot.querySelectorAll(
+        ".aplus-table-container table.aplus-table"
+      );
+
+      for (const table of tables) {
+        addPeopleColumnToTable(groupRoot, table);
       }
     }
   }
 
+  /**
+   * Collapse many rapid DOM mutations into a single update pass.
+   */
   function scheduleUpdate() {
     if (updateScheduled) {
       return;
     }
 
     updateScheduled = true;
+
     queueMicrotask(() => {
       updateScheduled = false;
       updatePeopleColumns();
     });
   }
 
-  function observeTimetable() {
+  function startObserver() {
     const groupTemplate = document.querySelector("#group-tpl");
 
-    if (!groupTemplate) {
-      const bootstrapObserver = new MutationObserver(() => {
-        if (document.querySelector("#group-tpl")) {
-          bootstrapObserver.disconnect();
-          observeTimetable();
-        }
-      });
+    if (groupTemplate) {
+      /*
+       * This handles
+       * - #group-tpl-RO being created
+       * - the timetable being rebuilt
+       * - table rows being replaced/added
+       * - text being updated inside the module
+       */
+      const observer = new MutationObserver(scheduleUpdate);
 
-      bootstrapObserver.observe(document.documentElement, {
+      observer.observe(groupTemplate, {
         childList: true,
         subtree: true,
+        characterData: true
       });
+
+      // Handle a table that already exists when the content script loads.
+      updatePeopleColumns();
       return;
     }
 
-    new MutationObserver(scheduleUpdate).observe(groupTemplate, {
-      childList: true,
-      subtree: true,
-      characterData: true,
+    /*
+     * If #group-tpl itself has not been inserted yet, briefly observe the
+     * document until it appears, then attach the more targeted observer.
+     */
+    const bootstrapObserver = new MutationObserver(() => {
+      if (document.querySelector("#group-tpl")) {
+        bootstrapObserver.disconnect();
+        startObserver();
+      }
     });
 
-    updatePeopleColumns();
+    bootstrapObserver.observe(document.documentElement, {
+      childList: true,
+      subtree: true
+    });
   }
 
-  observeTimetable();
+  startObserver();
 })();
