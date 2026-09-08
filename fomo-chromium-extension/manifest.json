@@ -18,6 +18,7 @@
         "https://mytimetablecloud.uts.edu.au/even/student*"
       ],
       "js": [
+        "calendar.js",
         "content.js"
       ],
       "run_at": "document_idle"

@@ -48,6 +48,72 @@
 
   let updateScheduled = false;
 
+  function startCalendarObserver() {
+    let lastCheckedUrl = null;
+    let checking = false;
+    let checkScheduled = false;
+
+    function findCalendarUrl() {
+      // This is the lazy method where we just look at all text fields until we find something
+      // that looks like the right URL, instead of knowing the exact structure.
+      for (const input of document.querySelectorAll('input[type="text"]')) {
+        try {
+          const url = new URL(input.value.trim());
+          if (url.origin === "https://mytimetablecloud.uts.edu.au" &&
+              /^\/even\/rest\/calendar\/ical\/[^/]+$/.test(url.pathname) &&
+              !url.username && !url.password) {
+            return url.href;
+          }
+        } catch {
+          // Most text inputs are not URLs.
+          // From testing there should only be two anyway so this isn't a big search
+        }
+      }
+      return null;
+    }
+
+    async function checkCalendar() {
+      if (checking) return;
+      const url = findCalendarUrl();
+      if (!url || url === lastCheckedUrl) return;
+      checking = true;
+      lastCheckedUrl = url;
+      try {
+        const user = await FomoCalendar.importCalendar(url);
+        if (user) console.info("[FOMO] Current user timetable:\n" + JSON.stringify(user, null, 2));
+      } catch {
+        // Do not include fetch errors, which can expose the private calendar URL.
+        console.warn("[FOMO] Calendar import failed. Reload the timetable page to retry.");
+      } finally {
+        checking = false;
+        // The user may have switched calendars while this request was running.
+        scheduleCalendarCheck();
+      }
+    }
+
+    function scheduleCalendarCheck() {
+      if (checkScheduled) return; //debounce
+      checkScheduled = true;
+      queueMicrotask(() => {
+        checkScheduled = false;
+        void checkCalendar();
+      });
+    }
+
+    const observer = new MutationObserver(scheduleCalendarCheck);
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["value"]
+    });
+    document.addEventListener("input", scheduleCalendarCheck);
+    document.addEventListener("change", scheduleCalendarCheck);
+    // Assigning input.value directly does not trigger a MutationObserver.
+    window.setInterval(scheduleCalendarCheck, 2000);
+    scheduleCalendarCheck();
+  }
+
   /**
    * Read the timetable key directly from the <h3> inside .desc-text.
    */
@@ -285,4 +351,5 @@
   }
 
   startObserver();
+  startCalendarObserver();
 })();
