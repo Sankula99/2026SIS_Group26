@@ -13,8 +13,11 @@ const FomoCalendar = (() => {
 
     const user = Object.create(null);
     const seen = new Set();
+    const events = [];
     const components = [];
     let description = null;
+    let start = null;
+    let end = null;
     let eventCount = 0;
 
     function addActivity(value) {
@@ -45,6 +48,8 @@ const FomoCalendar = (() => {
         components.push(component);
         if (component === "VEVENT") {
           description = null;
+          start = null;
+          end = null;
           eventCount++;
         }
       } else if (line.startsWith("END:")) {
@@ -52,11 +57,25 @@ const FomoCalendar = (() => {
         if (components.pop() !== component) {
           throw new Error("The ICS calendar contains an incomplete component.");
         }
-        if (component === "VEVENT") addActivity(description);
+        if (component === "VEVENT") {
+          addActivity(description);
+          events.push({
+            description,
+            start,
+            end
+          });
+        }
       } else if (components.at(-1) === "VEVENT") {
         // Parameters may contain quoted colons; VALARM descriptions are ignored.
         const match = line.match(/^DESCRIPTION(?:;(?:[^":]|"[^"]*")*)?:(.*)$/i);
         if (match) description = match[1];
+
+        const time = line.match(/^(DTSTART|DTEND)((?:;(?:[^":]|"[^"]*")*))?:(.*)$/i);
+        if (time) {
+          const value = time[3];
+          if (time[1].toUpperCase() === "DTSTART") start = value;
+          else end = value;
+        }
       }
     }
 
@@ -64,7 +83,7 @@ const FomoCalendar = (() => {
     if (eventCount && !seen.size) {
       throw new Error("No timetable activities were found in the calendar descriptions.");
     }
-    return { USER: user };
+    return { USER: user, EVENTS: events };
   }
 
   async function importCalendar(url) {
