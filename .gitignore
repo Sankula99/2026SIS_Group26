@@ -1,3 +1,4 @@
 .env
 .env.local
 src/lib/config.js
+**/node_modules/
