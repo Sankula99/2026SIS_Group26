@@ -8,36 +8,162 @@ import {
 } from "./lib/clerk.js";
 import { getProfile, upsertProfile } from "./lib/supabase.js";
 
-const MOCK = {
-  friends: [
-    { name: "Maya", initials: "MY", status: "DATA2001 · Workshop 02" },
-    { name: "Noah", initials: "NO", status: "Free until 2:00 PM" },
-    { name: "Priya", initials: "PR", status: "DATA2001 · Workshop 02" },
-    { name: "Liam", initials: "LI", status: "On campus today" },
-    { name: "Zoe", initials: "ZO", status: "DATA2001 · Workshop 02" },
-    { name: "Ethan", initials: "ET", status: "Free after 12:00 PM" }
-  ],
-  session: {
-    subject: "DATA2001",
-    activity: "Workshop 02",
-    time: "Tuesday · 10:00 AM–12:00 PM",
-    friends: ["Maya", "Priya", "Zoe"]
+const SUBJECTS = [
+  {
+    id: "41172_SPR_U_1_S",
+    code: "41172_SPR_U_1_S",
+    name: "Software Innovation Studio",
+    activities: [
+      {
+        name: "Tutorial 1",
+        icon: "book",
+        sessions: [
+          {
+            id: "Activity 01",
+            day: "Tuesday",
+            time: "10:00 am – 12:00 pm",
+            campus: "City (U)",
+            location: "CB11.06.101",
+            friends: ["Priyanka Ravi"]
+          }
+        ]
+      },
+      {
+        name: "Seminar 1",
+        icon: "seminar",
+        sessions: [
+          {
+            id: "Activity 01",
+            day: "Wednesday",
+            time: "2:00 pm – 3:00 pm",
+            campus: "City (U)",
+            location: "CB11.06.101",
+            friends: ["Shristi Shrestha"]
+          }
+        ]
+      },
+      {
+        name: "Workshop 1",
+        icon: "workshop",
+        sessions: [
+          {
+            id: "Activity 01",
+            day: "Monday",
+            time: "10:00 am – 12:00 pm",
+            campus: "City (U)",
+            location: "CB11.06.101",
+            friends: ["Priyanka Ravi", "Shristi Shrestha", "Alice Liang"]
+          },
+          {
+            id: "Activity 02",
+            day: "Tuesday",
+            time: "10:00 am – 11:00 am",
+            campus: "City (U)",
+            location: "CB11.B1.102",
+            friends: ["Priyanka Ravi", "Arav Lal"]
+          }
+        ]
+      },
+      {
+        name: "Computer Lab",
+        icon: "lab",
+        sessions: [
+          {
+            id: "Activity 01",
+            day: "Thursday",
+            time: "1:00 pm – 3:00 pm",
+            campus: "City (U)",
+            location: "CB11.06.101",
+            friends: ["Jack Merton"]
+          }
+        ]
+      }
+    ]
   },
-  freeTimes: [
-    { time: "Today · 1:00–2:30 PM", title: "You + Noah + Liam", detail: "1 hr 30 min shared break" },
-    { time: "Wednesday · 12:00–1:00 PM", title: "You + Maya + Priya", detail: "1 hr shared break" },
-    { time: "Thursday · 3:00–5:00 PM", title: "You + Zoe", detail: "2 hr shared break" }
-  ],
-  notifications: [
-    { title: "Priya joined your session", detail: "DATA2001 · Workshop 02", unread: true },
-    { title: "Noah wants to meet up", detail: "Today around 1:00 PM", unread: true },
-    { title: "Maya updated her timetable", detail: "Your Wednesday overlap changed", unread: false }
-  ]
-};
+  {
+    id: "41181_SPR_U_1_S",
+    code: "41181_SPR_U_1_S",
+    name: "Information Security and Management",
+    activities: [
+      {
+        name: "Tutorial 1",
+        icon: "book",
+        sessions: [
+          {
+            id: "Activity 01",
+            day: "Wednesday",
+            time: "10:00 am – 12:00 pm",
+            campus: "City (U)",
+            location: "UTS City Campus",
+            friends: ["Priyanka Ravi", "Omar Yang"]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "48730_SPR_U_1_S",
+    code: "48730_SPR_U_1_S",
+    name: "Cybersecurity",
+    activities: [
+      {
+        name: "Tutorial 1",
+        icon: "book",
+        sessions: [
+          {
+            id: "Activity 01",
+            day: "Thursday",
+            time: "11:00 am – 1:00 pm",
+            campus: "City (U)",
+            location: "UTS City Campus",
+            friends: ["Alice Liang"]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "41030_SPR_U_1_S",
+    code: "41030_SPR_U_1_S",
+    name: "Engineering Capstone",
+    activities: [
+      {
+        name: "Workshop 1",
+        icon: "workshop",
+        sessions: [
+          {
+            id: "Activity 01",
+            day: "Friday",
+            time: "9:00 am – 11:00 am",
+            campus: "City (U)",
+            location: "UTS City Campus",
+            friends: ["Priyanka Ravi"]
+          }
+        ]
+      }
+    ]
+  }
+];
+
+const PEOPLE = [
+  { name: "Priyanka Ravi", close: true, sharedSubjectIds: ["41172_SPR_U_1_S", "41181_SPR_U_1_S", "41030_SPR_U_1_S"] },
+  { name: "Shristi Shrestha", close: true, sharedSubjectIds: ["41172_SPR_U_1_S", "48730_SPR_U_1_S"] },
+  { name: "Nathan Cole", close: false, sharedSubjectIds: ["41181_SPR_U_1_S"] },
+  { name: "Arav Lal", close: false, sharedSubjectIds: ["41172_SPR_U_1_S", "41030_SPR_U_1_S"] },
+  { name: "Omar Yang", close: false, sharedSubjectIds: ["41181_SPR_U_1_S"] },
+  { name: "Alice Liang", close: false, sharedSubjectIds: ["41172_SPR_U_1_S", "48730_SPR_U_1_S"] },
+  { name: "Jack Merton", close: false, sharedSubjectIds: ["41172_SPR_U_1_S"] }
+];
+
+const NOTIFICATIONS = [
+  { title: "Priyanka joined an activity", detail: "Software Innovation Studio · Workshop 1", unread: true },
+  { title: "Friend request received", detail: "Open People to review it", unread: true },
+  { title: "Shared availability changed", detail: "Your timetable overlap was updated", unread: false }
+];
 
 const content = document.getElementById("content");
+const paperStack = document.getElementById("paperStack");
 const toast = document.getElementById("toast");
-const notificationDot = document.getElementById("notificationDot");
 
 let state = {
   view: "home",
@@ -47,17 +173,104 @@ let state = {
   friendNotifications: true,
   notificationCount: 2,
   currentTab: null,
-  isAllocate: false,
-  authView: "login",
+  isTimetable: false,
+  authView: "welcome",
   email: "",
   otpPurpose: "login",
   otpCode: "",
   user: null,
+  profile: null,
   authLoading: false,
-  authError: ""
+  authError: "",
+  selectedSubjectId: SUBJECTS[0].id,
+  selectedActivityName: "Workshop 1",
+  selectedSessionId: "Activity 01",
+  selectedPersonName: PEOPLE[0].name,
+  returnView: "home"
 };
 
 document.addEventListener("DOMContentLoaded", init);
+
+async function init() {
+  chrome.storage.local.remove(["password", "mfaEnabled", "fomo-auth-session"]);
+
+  const saved = await chrome.storage.local.get({
+    timetableSharing: true,
+    meetupNotifications: true,
+    classNotifications: true,
+    friendNotifications: true,
+    notificationCount: 2,
+    email: "",
+    authView: "welcome",
+    otpPurpose: "login"
+  });
+
+  Object.assign(state, saved);
+
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  state.currentTab = tabs?.[0] || null;
+  const haystack = `${state.currentTab?.url || ""} ${state.currentTab?.title || ""}`;
+  state.isTimetable = /mytimetable|allocate\+?|timetable|class.?registration/i.test(haystack);
+
+  let authReady = false;
+  try {
+    const clerk = await getClerk();
+    clerk.addListener(() => {
+      if (!authReady) return;
+      const nextUser = clerk.user
+        ? {
+            id: clerk.user.id,
+            email:
+              clerk.user.primaryEmailAddress?.emailAddress ||
+              clerk.user.emailAddresses?.[0]?.emailAddress ||
+              ""
+          }
+        : null;
+
+      const signedInChanged = Boolean(nextUser) !== Boolean(state.user);
+      state.user = nextUser;
+      if (!nextUser) {
+        state.profile = null;
+        state.authView = "welcome";
+        state.view = "home";
+      }
+      if (signedInChanged) render();
+    });
+  } catch (error) {
+    state.authError = error?.message || "Clerk failed to load.";
+  }
+
+  try {
+    const user = await getCurrentUser();
+    state.user = user || null;
+
+    if (user) {
+      try {
+        const { data: profile } = await getProfile(user.id);
+        state.profile = profile || null;
+      } catch (_error) {
+        // Clerk IDs are not Supabase auth UUIDs on this branch, so profile sync is optional.
+        state.profile = null;
+      }
+      state.authView = "home";
+    } else if (saved.authView === "otp" && isValidEmail(saved.email)) {
+      state.authView = "otp";
+      state.otpPurpose = saved.otpPurpose === "signup" ? "signup" : "login";
+      state.email = saved.email;
+    } else if (saved.authView === "login" || saved.authView === "signup") {
+      state.authView = saved.authView;
+    } else {
+      state.authView = "welcome";
+    }
+  } catch (error) {
+    state.user = null;
+    state.authView = "welcome";
+    state.authError ||= error?.message || "Could not check your session.";
+  }
+
+  authReady = true;
+  render();
+}
 
 function persistAuthProgress() {
   return chrome.storage.local.set({
@@ -67,328 +280,521 @@ function persistAuthProgress() {
   });
 }
 
-function init() {
-    chrome.storage.local.remove(["password", "mfaEnabled", "fomo-auth-session"]);
-    chrome.storage.local.get({
-    timetableSharing: true,
-    meetupNotifications: true,
-    classNotifications: true,
-    friendNotifications: true,
-    notificationCount: 2,
-    email: "",
-    authView: "login",
-    otpPurpose: "login"
-  }, async (saved) => {
-    Object.assign(state, saved);
-    delete state.password;
-    delete state.mfaEnabled;
-    delete state.mfaCode;
-    delete state.mfaSent;
-    updateNotificationBadge();
-
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      state.currentTab = tabs?.[0] || null;
-      const haystack = `${state.currentTab?.url || ""} ${state.currentTab?.title || ""}`;
-      state.isAllocate = /allocate\+?|timetable|class.?registration/i.test(haystack);
-    });
-
-    let authReady = false;
-    try {
-      const clerk = await getClerk();
-      clerk.addListener(() => {
-        if (!authReady) return;
-        const nextUser = clerk.user
-          ? { id: clerk.user.id, email: clerk.user.primaryEmailAddress?.emailAddress || "" }
-          : null;
-        const signedInChanged = Boolean(nextUser) !== Boolean(state.user);
-        state.user = nextUser;
-        if (!nextUser) {
-          state.authView = "login";
-        }
-        if (signedInChanged) render();
-      });
-    } catch (error) {
-      state.authError = error.message || "Clerk failed to load.";
-    }
-
-    const user = await getCurrentUser();
-    state.user = user || null;
-    if (user) {
-      state.authView = "home";
-    } else if (saved.authView === "otp" && isValidEmail(saved.email)) {
-      state.authView = "otp";
-      state.otpPurpose = saved.otpPurpose === "signup" ? "signup" : "login";
-      state.email = saved.email;
-    } else {
-      state.authView = saved.authView === "signup" ? "signup" : "login";
-    }
-    authReady = true;
-    render();
-  });
-
-  document.getElementById("homeBtn").addEventListener("click", () => go("home"));
-  document.getElementById("settingsBtn").addEventListener("click", () => go("settings"));
-  document.getElementById("notificationsBtn").addEventListener("click", openNotifications);
+function applyTheme(theme) {
+  paperStack.className = `paper-stack theme-${theme}`;
 }
 
-function go(view) {
+function go(view, payload = {}) {
   state.view = view;
+  Object.assign(state, payload);
   render();
 }
 
 function render() {
   if (!state.user) {
-    if (state.authView === "signup") {
-      renderSignup();
-      return;
-    }
-    if (state.authView === "otp") {
-      renderOtp();
-      return;
-    }
-    renderLogin();
-    return;
+    applyTheme("yellow");
+    if (state.authView === "login") return renderLogin();
+    if (state.authView === "signup") return renderSignup();
+    if (state.authView === "otp") return renderOtp();
+    return renderWelcome();
   }
 
   const renderers = {
     home: renderHome,
-    friends: renderFriends,
-    free: renderFreeTime,
-    meetup: renderMeetup,
+    subjects: renderSubjects,
+    subject: renderSubject,
+    activity: renderActivity,
+    session: renderSession,
+    people: renderPeople,
+    person: renderPerson,
+    personSubject: renderPersonSubject,
     settings: renderSettings,
     notifications: renderNotifications
   };
+
   (renderers[state.view] || renderHome)();
 }
 
+function getDisplayName() {
+  const profileName = state.profile?.display_name || state.profile?.name || state.user?.user_metadata?.full_name;
+  if (profileName) return profileName;
+
+  const localPart = (state.user?.email || state.email || "FOMO Student").split("@")[0];
+  const prettified = localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+  return prettified || "FOMO Student";
+}
+
+function getSubject() {
+  return SUBJECTS.find(subject => subject.id === state.selectedSubjectId) || SUBJECTS[0];
+}
+
+function getActivity() {
+  const subject = getSubject();
+  return subject.activities.find(activity => activity.name === state.selectedActivityName) || subject.activities[0];
+}
+
+function getSession() {
+  const activity = getActivity();
+  return activity.sessions.find(session => session.id === state.selectedSessionId) || activity.sessions[0];
+}
+
+function getPerson() {
+  return PEOPLE.find(person => person.name === state.selectedPersonName) || PEOPLE[0];
+}
+
+function header({ backView = null } = {}) {
+  return `
+    <header class="note-header">
+      <button class="note-logo-button" data-home title="Home">
+        <img class="note-logo" src="assets/fomo-logo.png" alt="FOMO" />
+      </button>
+      <button class="profile-chip" data-profile title="Profile">
+        <span class="profile-avatar" aria-hidden="true"></span>
+        <span class="profile-copy">
+          <strong>${escapeHtml(getDisplayName())}</strong>
+          <small>Edit Profile &gt;</small>
+        </span>
+      </button>
+      <span class="header-actions">
+        <button class="sketch-icon-btn" data-close title="Close FOMO" aria-label="Close FOMO">×</button>
+        <button class="sketch-icon-btn gear" data-settings title="Settings" aria-label="Settings">⚙</button>
+      </span>
+      ${backView ? `<button class="back-button" data-back="${escapeHtml(backView)}" title="Back" aria-label="Back">←</button>` : ""}
+    </header>
+  `;
+}
+
+function wireHeader() {
+  const homeButton = content.querySelector("[data-home]");
+  const profileButton = content.querySelector("[data-profile]");
+  const closeButton = content.querySelector("[data-close]");
+  const settingsButton = content.querySelector("[data-settings]");
+  const backButton = content.querySelector("[data-back]");
+
+  homeButton?.addEventListener("click", () => go("home"));
+  profileButton?.addEventListener("click", () => {
+    showToast("Profile editing is the next screen to connect to Supabase.");
+  });
+  closeButton?.addEventListener("click", () => window.close());
+  settingsButton?.addEventListener("click", () => {
+    state.returnView = state.view;
+    go("settings");
+  });
+  backButton?.addEventListener("click", () => go(backButton.dataset.back || "home"));
+}
+
+/* ---------- Main screens ---------- */
 function renderHome() {
-  const s = MOCK.session;
-  const initials = s.friends.map(name => {
-    const friend = MOCK.friends.find(f => f.name === name);
-    return `<span class="avatar" title="${escapeHtml(name)}">${friend?.initials || name.slice(0,2).toUpperCase()}</span>`;
-  }).join("");
-
+  applyTheme("yellow");
   content.innerHTML = `
-    <section class="context-card">
-      <div class="context-top">
-        <span class="context-label"><span class="status-dot"></span>${state.isAllocate ? "Allocate+ detected" : "Demo timetable active"}</span>
-        <span class="context-chip">${state.isAllocate ? "LIVE PAGE" : "MVP DATA"}</span>
-      </div>
-      <h2>${s.subject} · ${s.activity}</h2>
-      <p>${s.time}</p>
-      <div class="friend-row">
-        <div class="avatar-stack">${initials}</div>
-        <div>
-          <strong>${s.friends.length} friends in this class</strong>
-          <small>${s.friends.join(" · ")}</small>
-        </div>
-      </div>
-    </section>
+    ${header()}
+    <div class="screen-scroll home-content">
+      <div class="home-question hand-underline">What would you like to view?</div>
 
-    <div class="section-title">
-      <h3>What do you want to do?</h3>
-      <span>6 friends connected</span>
-    </div>
-
-    <div class="action-grid">
-      <button class="action-card" data-view="friends">
-        <span class="action-icon">◎</span>
-        <strong>Friends</strong>
-        <small>See friends, requests and class activity.</small>
+      <button class="menu-card" id="subjectsButton">
+        <span class="home-icon" aria-hidden="true">${iconSvg("subjects")}</span>
+        <span>
+          <span class="menu-title">Subjects</span>
+          <span class="menu-desc">View your subjects,<br />activities and friends.</span>
+        </span>
+        <span class="menu-arrow">›</span>
       </button>
-      <button class="action-card" data-view="free">
-        <span class="action-icon">◷</span>
-        <strong>Free Together</strong>
-        <small>Find overlapping breaks automatically.</small>
+
+      <button class="menu-card" id="peopleButton">
+        <span class="home-icon" aria-hidden="true">${iconSvg("people")}</span>
+        <span>
+          <span class="menu-title">People</span>
+          <span class="menu-desc">See your friends and<br />their availabilities.</span>
+        </span>
+        <span class="menu-arrow">›</span>
       </button>
-      <button class="action-card" data-view="meetup">
-        <span class="action-icon">☕</span>
-        <strong>Meet Up</strong>
-        <small>Send a low-pressure meetup request.</small>
-      </button>
-      <button class="action-card" id="sessionBtn">
-        <span class="action-icon">▦</span>
-        <strong>Friends in Classes</strong>
-        <small>Compare who is allocated where.</small>
-      </button>
-    </div>
 
-    <div class="sharing-row">
-      <div>
-        <strong>Share my timetable</strong>
-        <small>${state.timetableSharing ? "Visible to approved friends" : "Your timetable is private"}</small>
-      </div>
-      <button class="switch ${state.timetableSharing ? "on" : ""}" id="shareToggle" aria-label="Toggle timetable sharing">
-        <span></span>
-      </button>
-    </div>
-
-    <div class="demo-actions">
-      <button class="primary-btn" id="overlayBtn">Show FOMO on this page</button>
-      <button class="secondary-btn" id="demoBtn">Demo timetable</button>
-    </div>
-  `;
-
-  content.querySelectorAll("[data-view]").forEach(btn => {
-    btn.addEventListener("click", () => go(btn.dataset.view));
-  });
-  document.getElementById("shareToggle").addEventListener("click", toggleSharing);
-  document.getElementById("overlayBtn").addEventListener("click", injectOverlay);
-  document.getElementById("demoBtn").addEventListener("click", openDemoPage);
-  document.getElementById("sessionBtn").addEventListener("click", () => {
-    showToast(`${s.friends.join(", ")} are in ${s.activity}.`);
-  });
-}
-
-function renderFriends() {
-  content.innerHTML = `
-    ${heading("Friends", "Only accepted friends can see shared timetable information.")}
-    <div class="list">
-      ${MOCK.friends.map(friend => `
-        <div class="list-item">
-          <span class="list-avatar">${friend.initials}</span>
-          <div class="list-copy">
-            <strong>${friend.name}</strong>
-            <small>${friend.status}</small>
-          </div>
-          <span class="trailing">›</span>
-        </div>
-      `).join("")}
-    </div>
-  `;
-  wireBack();
-}
-
-function renderFreeTime() {
-  content.innerHTML = `
-    ${heading("Free Together", "Suggested from timetable overlap — nothing is booked automatically.")}
-    ${MOCK.freeTimes.map((slot, i) => `
-      <section class="free-card">
-        <span class="time">${slot.time}</span>
-        <h4>${slot.title}</h4>
-        <p>${slot.detail}</p>
-        <button class="mini-btn" data-slot="${i}">Suggest meetup</button>
-      </section>
-    `).join("")}
-  `;
-  wireBack();
-  content.querySelectorAll("[data-slot]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const slot = MOCK.freeTimes[Number(btn.dataset.slot)];
-      showToast(`Meetup suggestion ready for ${slot.time}.`);
-      setTimeout(() => go("meetup"), 350);
-    });
-  });
-}
-
-function renderMeetup() {
-  content.innerHTML = `
-    ${heading("Meet Up", "Choose a friend. They receive a request — not an automatic event.")}
-    <div class="list">
-      ${MOCK.friends.map((friend, i) => `
-        <button class="list-item clickable" data-friend="${i}" style="width:100%; text-align:left;">
-          <span class="list-avatar">${friend.initials}</span>
-          <span class="list-copy">
-            <strong>${friend.name}</strong>
-            <small>${i % 2 === 0 ? "Shared free time today" : "On campus today"}</small>
-          </span>
-          <span class="trailing">Send →</span>
-        </button>
-      `).join("")}
-    </div>
-  `;
-  wireBack();
-  content.querySelectorAll("[data-friend]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const friend = MOCK.friends[Number(btn.dataset.friend)];
-      btn.querySelector(".trailing").textContent = "Sent ✓";
-      btn.disabled = true;
-      showToast(`Meetup request sent to ${friend.name}.`);
-    });
-  });
-}
-
-function renderSettings() {
-  content.innerHTML = `
-    ${heading("Privacy & Settings", "The MVP keeps timetable sharing opt-in and reversible.")}
-    <div class="settings-group">
-      ${settingLine("Timetable sharing", state.timetableSharing, "timetableSharing", "Let approved friends see your timetable")}
-    </div>
-    <div class="settings-group">
-      ${settingLine("Friend requests", state.friendNotifications, "friendNotifications", "Notify when someone wants to connect")}
-      ${settingLine("Friends joining classes", state.classNotifications, "classNotifications", "Notify when overlap may have changed")}
-      ${settingLine("Meetup requests", state.meetupNotifications, "meetupNotifications", "Notify when a friend wants to meet")}
-    </div>
-    <div class="settings-group">
-      <div class="settings-line">
-        <div>
-          <strong>Account</strong>
-          <small>${state.user ? escapeHtml(state.user.email || "") : "Not signed in"}</small>
-        </div>
-        ${state.user ? `<button class="secondary-btn" id="logoutBtn" style="height:30px;border-radius:8px;font-size:9px;font-weight:800;">Sign out</button>` : ""}
+      <div class="home-footer">
+        <span class="home-status-dot"></span>
+        <span>${state.isTimetable ? "UTS timetable page detected" : "FOMO prototype ready"}</span>
       </div>
     </div>
   `;
-  wireBack();
-  content.querySelectorAll("[data-setting]").forEach(button => {
+
+  wireHeader();
+  document.getElementById("subjectsButton").addEventListener("click", () => go("subjects"));
+  document.getElementById("peopleButton").addEventListener("click", () => go("people"));
+}
+
+function renderSubjects() {
+  applyTheme("pink");
+  content.innerHTML = `
+    ${header({ backView: "home" })}
+    <div class="screen-scroll">
+      <h1 class="screen-title hand-underline">Subjects</h1>
+      <div class="section-count">${SUBJECTS.length} Subjects</div>
+      <div class="note-list">
+        ${SUBJECTS.map(subject => `
+          <button class="note-row" data-subject="${escapeHtml(subject.id)}">
+            <span>
+              <strong>${escapeHtml(subject.code)}</strong>
+              <small>${escapeHtml(subject.name)}</small>
+            </span>
+            <span class="row-arrow">›</span>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `;
+
+  wireHeader();
+  content.querySelectorAll("[data-subject]").forEach(button => {
     button.addEventListener("click", () => {
-      toggleSetting(button.dataset.setting);
+      const subject = SUBJECTS.find(item => item.id === button.dataset.subject);
+      go("subject", {
+        selectedSubjectId: button.dataset.subject,
+        selectedActivityName: subject?.activities?.[0]?.name || ""
+      });
+    });
+  });
+}
+
+function renderSubject() {
+  applyTheme("green");
+  const subject = getSubject();
+
+  content.innerHTML = `
+    ${header({ backView: "subjects" })}
+    <div class="screen-scroll">
+      <div class="subject-code">${escapeHtml(subject.code)}</div>
+      <h1 class="subject-name hand-underline">${escapeHtml(subject.name)}</h1>
+      <div class="section-count">${subject.activities.length} ${subject.activities.length === 1 ? "Activity" : "Activities"}</div>
+
+      <div class="note-list">
+        ${subject.activities.map(activity => `
+          <button class="note-row activity-row" data-activity="${escapeHtml(activity.name)}">
+            <span class="activity-icon" aria-hidden="true">${iconSvg(activity.icon)}</span>
+            <strong>${escapeHtml(activity.name)}</strong>
+            <span class="row-arrow">›</span>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `;
+
+  wireHeader();
+  content.querySelectorAll("[data-activity]").forEach(button => {
+    button.addEventListener("click", () => {
+      const activity = subject.activities.find(item => item.name === button.dataset.activity);
+      go("activity", {
+        selectedActivityName: button.dataset.activity,
+        selectedSessionId: activity?.sessions?.[0]?.id || ""
+      });
+    });
+  });
+}
+
+function renderActivity() {
+  applyTheme("blue");
+  const subject = getSubject();
+  const activity = getActivity();
+
+  content.innerHTML = `
+    ${header({ backView: "subject" })}
+    <div class="screen-scroll">
+      <div class="subject-code">${escapeHtml(subject.code)}</div>
+      <h1 class="subject-name">${escapeHtml(subject.name)}</h1>
+      <h2 class="screen-subtitle hand-underline">${escapeHtml(activity.name)}</h2>
+
+      <div class="note-list" style="margin-top:10px;">
+        ${activity.sessions.map(session => `
+          <button class="note-row session-row" data-session="${escapeHtml(session.id)}">
+            <span>
+              <span class="session-title">
+                ${escapeHtml(session.id)}
+                <span class="friend-glyphs">${friendGlyphs(session.friends.length)}</span>
+              </span>
+              <span class="session-meta">
+                ${escapeHtml(session.day)} ${escapeHtml(session.time)}<br />
+                Campus: ${escapeHtml(session.campus)} &nbsp; Location: ${escapeHtml(session.location)}
+              </span>
+            </span>
+            <span class="row-arrow">›</span>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `;
+
+  wireHeader();
+  content.querySelectorAll("[data-session]").forEach(button => {
+    button.addEventListener("click", () => go("session", { selectedSessionId: button.dataset.session }));
+  });
+}
+
+function renderSession() {
+  applyTheme("purple");
+  const subject = getSubject();
+  const activity = getActivity();
+  const session = getSession();
+
+  const visiblePeople = session.friends
+    .map(name => PEOPLE.find(person => person.name === name) || { name, close: false })
+    .filter(Boolean);
+
+  content.innerHTML = `
+    ${header({ backView: "activity" })}
+    <div class="screen-scroll">
+      <div class="subject-code">${escapeHtml(subject.code)}</div>
+      <h1 class="subject-name">${escapeHtml(subject.name)}</h1>
+      <h2 class="screen-subtitle hand-underline">${escapeHtml(activity.name)} &nbsp;|&nbsp; ${escapeHtml(session.id)}</h2>
+
+      <div class="detail-box">
+        <p>${escapeHtml(session.day)} ${escapeHtml(session.time)}</p>
+        <p>Campus: ${escapeHtml(session.campus)} &nbsp; Location: ${escapeHtml(session.location)}</p>
+      </div>
+
+      <div class="people-label">
+        <span>People in this activity (${visiblePeople.length})</span>
+        <span class="icons">★ ♙♙</span>
+      </div>
+
+      <div class="people-panel">
+        <div class="list-scroll" style="max-height:179px;">
+          ${visiblePeople.length ? visiblePeople.map(person => personRow(person, false)).join("") : `
+            <div class="empty-note">None of your opted-in friends are in this activity yet.</div>
+          `}
+        </div>
+      </div>
+      <p class="fine-print">Only showing friends who have opted in.</p>
+    </div>
+  `;
+
+  wireHeader();
+  wirePersonRows();
+}
+
+function renderPeople() {
+  applyTheme("pink");
+  const closeCount = PEOPLE.filter(person => person.close).length;
+
+  content.innerHTML = `
+    ${header({ backView: "home" })}
+    <div class="screen-scroll">
+      <h1 class="screen-title hand-underline">People</h1>
+      <div class="section-count">${closeCount} Close Friends, ${PEOPLE.length} Friends</div>
+      <div class="people-panel">
+        <div class="list-scroll">
+          ${PEOPLE.map(person => personRow(person, true)).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+
+  wireHeader();
+  wirePersonRows();
+}
+
+function renderPerson() {
+  applyTheme("green");
+  const person = getPerson();
+  const sharedSubjects = person.sharedSubjectIds
+    .map(id => SUBJECTS.find(subject => subject.id === id))
+    .filter(Boolean);
+
+  content.innerHTML = `
+    ${header({ backView: "people" })}
+    <div class="screen-scroll">
+      <div class="friend-profile-heading">
+        <span class="person-avatar" aria-hidden="true"></span>
+        <h2 class="hand-underline">${escapeHtml(person.name)}</h2>
+      </div>
+      <div class="section-count">${sharedSubjects.length} Shared ${sharedSubjects.length === 1 ? "Subject" : "Subjects"}</div>
+      <div class="note-list">
+        ${sharedSubjects.map(subject => `
+          <button class="note-row" data-person-subject="${escapeHtml(subject.id)}">
+            <span>
+              <strong>${escapeHtml(subject.code)}</strong>
+              <small>${escapeHtml(subject.name)}</small>
+            </span>
+            <span class="row-arrow">›</span>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `;
+
+  wireHeader();
+  content.querySelectorAll("[data-person-subject]").forEach(button => {
+    button.addEventListener("click", () => go("personSubject", { selectedSubjectId: button.dataset.personSubject }));
+  });
+}
+
+function renderPersonSubject() {
+  applyTheme("blue");
+  const person = getPerson();
+  const subject = getSubject();
+  const relevantActivities = subject.activities.filter(activity =>
+    activity.sessions.some(session => session.friends.includes(person.name))
+  );
+
+  content.innerHTML = `
+    ${header({ backView: "person" })}
+    <div class="screen-scroll">
+      <div class="friend-profile-heading" style="margin-bottom:7px;">
+        <span class="person-avatar" aria-hidden="true"></span>
+        <h2 class="hand-underline">${escapeHtml(person.name)}</h2>
+      </div>
+      <div class="subject-code">${escapeHtml(subject.code)}</div>
+      <h1 class="subject-name hand-underline">${escapeHtml(subject.name)}</h1>
+
+      <div class="note-list" style="margin-top:10px;">
+        ${relevantActivities.length ? relevantActivities.flatMap(activity =>
+          activity.sessions
+            .filter(session => session.friends.includes(person.name))
+            .map(session => `
+              <div class="note-row session-row" style="cursor:default;">
+                <span>
+                  <span class="session-title">${escapeHtml(activity.name)} · ${escapeHtml(session.id)} ${person.close ? "★" : "♙"}</span>
+                  <span class="session-meta">${escapeHtml(session.day)} ${escapeHtml(session.time)}</span>
+                </span>
+                <span class="friend-glyphs">♙</span>
+              </div>
+            `)
+        ).join("") : `
+          <div class="empty-note">Shared subject found, but no shared activity is available in the prototype data.</div>
+        `}
+      </div>
+    </div>
+  `;
+
+  wireHeader();
+}
+
+function personRow(person, showArrow) {
+  return `
+    <button class="person-row" data-person="${escapeHtml(person.name)}">
+      <span class="friend-star ${person.close ? "close" : ""}" title="${person.close ? "Close friend" : "Friend"}">${person.close ? "★" : "☆"}</span>
+      <span class="person-avatar" aria-hidden="true"></span>
+      <strong>${escapeHtml(person.name)}</strong>
+      <span class="mini-arrow">${showArrow ? "›" : ""}</span>
+    </button>
+  `;
+}
+
+function wirePersonRows() {
+  content.querySelectorAll("[data-person]").forEach(button => {
+    button.addEventListener("click", () => go("person", { selectedPersonName: button.dataset.person }));
+  });
+}
+
+/* ---------- Settings ---------- */
+function renderSettings() {
+  applyTheme("yellow");
+
+  content.innerHTML = `
+    ${header({ backView: state.returnView || "home" })}
+    <div class="screen-scroll">
+      <h1 class="screen-title hand-underline">Settings</h1>
+      <div class="settings-list">
+        ${settingRow("Share my timetable", "Visible to approved friends", "timetableSharing", state.timetableSharing)}
+        ${settingRow("Friend requests", "Notify me about new requests", "friendNotifications", state.friendNotifications)}
+        ${settingRow("Friends joining classes", "Notify when a shared class changes", "classNotifications", state.classNotifications)}
+        ${settingRow("Meetup requests", "Notify when a friend wants to meet", "meetupNotifications", state.meetupNotifications)}
+
+        <div class="setting-row">
+          <span>
+            <strong>Notifications</strong>
+            <small>${state.notificationCount} unread prototype notifications</small>
+          </span>
+          <button class="paper-link-button" id="notificationsButton">View</button>
+        </div>
+
+        <div class="setting-row">
+          <span>
+            <strong>Account</strong>
+            <small>${escapeHtml(state.user?.email || "Signed in")}</small>
+          </span>
+          <button class="paper-danger-button" id="logoutButton">Sign out</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  wireHeader();
+
+  content.querySelectorAll("[data-setting]").forEach(button => {
+    button.addEventListener("click", async () => {
+      const key = button.dataset.setting;
+      state[key] = !state[key];
+      await chrome.storage.local.set({ [key]: state[key] });
+      renderSettings();
+      showToast(`${humanizeSetting(key)} ${state[key] ? "on" : "off"}.`);
     });
   });
 
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", async () => {
-      await handleLogout();
-    });
-  }
+  document.getElementById("notificationsButton").addEventListener("click", () => go("notifications"));
+  document.getElementById("logoutButton").addEventListener("click", handleLogout);
 }
 
 function renderNotifications() {
-  content.innerHTML = `
-    ${heading("Notifications", "Useful updates without changing your timetable for you.")}
-    <div class="list">
-      ${MOCK.notifications.map(n => `
-        <div class="list-item">
-          ${n.unread ? '<span class="notification-unread"></span>' : '<span style="width:7px"></span>'}
-          <div class="list-copy">
-            <strong>${n.title}</strong>
-            <small>${n.detail}</small>
-          </div>
-        </div>
-      `).join("")}
-    </div>
-  `;
-  wireBack();
-}
+  applyTheme("purple");
+  state.notificationCount = 0;
+  chrome.storage.local.set({ notificationCount: 0 });
+  chrome.runtime.sendMessage({ type: "SET_BADGE", count: 0 }).catch(() => {});
 
-function renderLogin() {
   content.innerHTML = `
-    <div class="auth-wrap">
-      <div class="auth-card">
-        <div class="auth-header">
-          <span class="brand-mark">F</span>
-          <div>
-            <strong>Welcome back</strong>
-            <small>We'll email you a sign-in code</small>
+    ${header({ backView: "settings" })}
+    <div class="screen-scroll">
+      <h1 class="screen-title hand-underline">Notifications</h1>
+      <div class="people-panel" style="margin-top:11px;">
+        ${NOTIFICATIONS.map(item => `
+          <div class="notification-item">
+            <strong>${item.unread ? '<span class="notification-dot"></span>' : ""}${escapeHtml(item.title)}</strong>
+            <small>${escapeHtml(item.detail)}</small>
           </div>
-        </div>
-        ${state.authError ? `<div class="auth-error">${escapeHtml(state.authError)}</div>` : ""}
-        <div class="auth-field">
-          <label for="loginEmail">Email</label>
-          <input id="loginEmail" type="email" value="${escapeHtml(state.email)}" placeholder="you@uni.edu.au" autocomplete="email" ${state.authLoading ? "disabled" : ""} />
-        </div>
-        <button class="primary-btn auth-submit" id="loginSubmit" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? "Sending code..." : "Send sign-in code"}</button>
-        <button class="link-btn" id="goSignup">Create an account</button>
+        `).join("")}
       </div>
     </div>
   `;
 
-  document.getElementById("loginSubmit").addEventListener("click", handleLogin);
-  document.getElementById("loginEmail").addEventListener("keydown", (event) => {
-    if (event.key === "Enter") handleLogin();
+  wireHeader();
+}
+
+function settingRow(title, subtitle, key, enabled) {
+  return `
+    <div class="setting-row">
+      <span>
+        <strong>${escapeHtml(title)}</strong>
+        <small>${escapeHtml(subtitle)}</small>
+      </span>
+      <button class="paper-switch ${enabled ? "on" : ""}" data-setting="${escapeHtml(key)}" aria-label="Toggle ${escapeHtml(title)}"></button>
+    </div>
+  `;
+}
+
+/* ---------- Authentication ---------- */
+function renderWelcome() {
+  applyTheme("yellow");
+  content.innerHTML = `
+    <div class="auth-screen">
+      <img class="auth-logo-large" src="assets/fomo-logo.png" alt="FOMO" />
+      <p class="auth-tagline">What are you waiting for?</p>
+      <p class="auth-subtagline">Everyone else is doing it :)</p>
+      <div class="auth-actions">
+        <button class="paper-button" id="welcomeLogin">Log in</button>
+        <button class="paper-button secondary" id="welcomeSignup">Sign up</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("welcomeLogin").addEventListener("click", () => {
+    state.authView = "login";
+    state.authError = "";
+    persistAuthProgress();
+    render();
   });
-  document.getElementById("goSignup").addEventListener("click", () => {
+
+  document.getElementById("welcomeSignup").addEventListener("click", () => {
     state.authView = "signup";
     state.authError = "";
     persistAuthProgress();
@@ -396,75 +802,105 @@ function renderLogin() {
   });
 }
 
-function renderSignup() {
+function renderLogin() {
+  applyTheme("pink");
   content.innerHTML = `
-    <div class="auth-wrap">
-      <div class="auth-card">
-        <div class="auth-header">
-          <span class="brand-mark">F</span>
-          <div>
-            <strong>Create account</strong>
-            <small>Join FOMO with your uni email</small>
-          </div>
+    <div class="auth-screen">
+      <img class="auth-logo-large" style="width:132px;margin-bottom:15px;" src="assets/fomo-logo.png" alt="FOMO" />
+      <div class="auth-form">
+        <h1 class="auth-form-title hand-underline">Log in</h1>
+        <p class="auth-form-copy">Enter your email and we'll send you a one-time sign-in code.</p>
+        ${state.authError ? `<div class="auth-error">${escapeHtml(state.authError)}</div>` : ""}
+        <div class="auth-field">
+          <label for="loginEmail">Email</label>
+          <input id="loginEmail" type="email" value="${escapeHtml(state.email)}" placeholder="you@uts.edu.au" autocomplete="email" ${state.authLoading ? "disabled" : ""} />
         </div>
+        <button class="paper-button" id="loginSubmit" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? "Sending code..." : "Send sign-in code"}</button>
+        <div class="auth-links">
+          <button class="text-link" id="loginBack">Back</button>
+          <button class="text-link" id="goSignup">Create an account</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("loginSubmit").addEventListener("click", handleLogin);
+  document.getElementById("loginEmail").addEventListener("keydown", event => {
+    if (event.key === "Enter") handleLogin();
+  });
+  document.getElementById("loginBack").addEventListener("click", () => setAuthView("welcome"));
+  document.getElementById("goSignup").addEventListener("click", () => setAuthView("signup"));
+}
+
+function renderSignup() {
+  applyTheme("pink");
+  content.innerHTML = `
+    <div class="auth-screen">
+      <img class="auth-logo-large" style="width:132px;margin-bottom:15px;" src="assets/fomo-logo.png" alt="FOMO" />
+      <div class="auth-form">
+        <h1 class="auth-form-title hand-underline">Sign up</h1>
+        <p class="auth-form-copy">Create your FOMO account with your university email.</p>
         ${state.authError ? `<div class="auth-error">${escapeHtml(state.authError)}</div>` : ""}
         <div class="auth-field">
           <label for="signupEmail">Email</label>
-          <input id="signupEmail" type="email" value="${escapeHtml(state.email)}" placeholder="you@uni.edu.au" autocomplete="email" ${state.authLoading ? "disabled" : ""} />
+          <input id="signupEmail" type="email" value="${escapeHtml(state.email)}" placeholder="you@uts.edu.au" autocomplete="email" ${state.authLoading ? "disabled" : ""} />
         </div>
-        <button class="primary-btn auth-submit" id="signupSubmit" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? "Sending code..." : "Send verification code"}</button>
-        <button class="link-btn" id="goLogin">Already have an account? Sign in</button>
+        <button class="paper-button" id="signupSubmit" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? "Sending code..." : "Send verification code"}</button>
+        <div class="auth-links">
+          <button class="text-link" id="signupBack">Back</button>
+          <button class="text-link" id="goLogin">Already have an account</button>
+        </div>
       </div>
     </div>
   `;
 
   document.getElementById("signupSubmit").addEventListener("click", handleSignup);
-  document.getElementById("signupEmail").addEventListener("keydown", (event) => {
+  document.getElementById("signupEmail").addEventListener("keydown", event => {
     if (event.key === "Enter") handleSignup();
   });
-  document.getElementById("goLogin").addEventListener("click", () => {
-    state.authView = "login";
-    state.authError = "";
-    persistAuthProgress();
-    render();
-  });
+  document.getElementById("signupBack").addEventListener("click", () => setAuthView("welcome"));
+  document.getElementById("goLogin").addEventListener("click", () => setAuthView("login"));
 }
 
 function renderOtp() {
-  const otpTitle = state.otpPurpose === "signup" ? "Verify your email" : "Check your email";
+  applyTheme("pink");
+  const title = state.otpPurpose === "signup" ? "Verify your email" : "Check your email";
+
   content.innerHTML = `
-    <div class="auth-wrap">
-      <div class="auth-card">
-        <div class="auth-header">
-          <span class="brand-mark">F</span>
-          <div>
-            <strong>${otpTitle}</strong>
-            <small>Enter the 6-digit code sent to ${escapeHtml(state.email || "your email")}</small>
-          </div>
-        </div>
+    <div class="auth-screen">
+      <img class="auth-logo-large" style="width:120px;margin-bottom:13px;" src="assets/fomo-logo.png" alt="FOMO" />
+      <div class="auth-form">
+        <h1 class="auth-form-title hand-underline">${title}</h1>
+        <p class="auth-form-copy">Enter the code sent to ${escapeHtml(state.email || "your email")}.</p>
         ${state.authError ? `<div class="auth-error">${escapeHtml(state.authError)}</div>` : ""}
         <div class="auth-field">
-          <label for="otpCodeInput">Code</label>
-          <input id="otpCodeInput" type="text" inputmode="numeric" maxlength="8" placeholder="123456" autocomplete="one-time-code" value="${escapeHtml(state.otpCode)}" ${state.authLoading ? "disabled" : ""} />
+          <label for="otpCodeInput">Verification code</label>
+          <input class="otp-input" id="otpCodeInput" type="text" inputmode="numeric" maxlength="8" placeholder="123456" autocomplete="one-time-code" value="${escapeHtml(state.otpCode)}" ${state.authLoading ? "disabled" : ""} />
         </div>
-        <button class="primary-btn auth-submit" id="otpVerifyBtn" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? "Verifying..." : "Verify"}</button>
-        <button class="link-btn" id="otpResendBtn" ${state.authLoading ? "disabled" : ""}>Resend code</button>
-        <button class="link-btn" id="otpBackBtn">Use a different email</button>
+        <button class="paper-button" id="otpVerifyButton" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? "Verifying..." : "Verify"}</button>
+        <div class="auth-links">
+          <button class="text-link" id="otpBackButton">Different email</button>
+          <button class="text-link" id="otpResendButton" ${state.authLoading ? "disabled" : ""}>Resend code</button>
+        </div>
       </div>
     </div>
   `;
 
-  document.getElementById("otpVerifyBtn").addEventListener("click", handleOtpVerify);
-  document.getElementById("otpCodeInput").addEventListener("keydown", (event) => {
+  document.getElementById("otpVerifyButton").addEventListener("click", handleOtpVerify);
+  document.getElementById("otpCodeInput").addEventListener("keydown", event => {
     if (event.key === "Enter") handleOtpVerify();
   });
-  document.getElementById("otpResendBtn").addEventListener("click", handleOtpResend);
-  document.getElementById("otpBackBtn").addEventListener("click", () => {
-    state.authView = state.otpPurpose === "signup" ? "signup" : "login";
-    state.authError = "";
-    persistAuthProgress();
-    render();
+  document.getElementById("otpResendButton").addEventListener("click", handleOtpResend);
+  document.getElementById("otpBackButton").addEventListener("click", () => {
+    setAuthView(state.otpPurpose === "signup" ? "signup" : "login");
   });
+}
+
+function setAuthView(view) {
+  state.authView = view;
+  state.authError = "";
+  persistAuthProgress();
+  render();
 }
 
 function isValidEmail(email) {
@@ -474,6 +910,7 @@ function isValidEmail(email) {
 async function sendAuthOtp(purpose) {
   const send = purpose === "signup" ? sendSignupOtp : sendLoginOtp;
   const { error } = await send(state.email);
+
   if (error) {
     const message = error.message || "Could not send the verification code.";
     if (purpose === "login" && /signup|not (found|registered)|does not exist/i.test(message)) {
@@ -481,6 +918,7 @@ async function sendAuthOtp(purpose) {
     }
     return message;
   }
+
   return null;
 }
 
@@ -547,6 +985,7 @@ async function handleLogin() {
 async function handleOtpVerify() {
   const token = (document.getElementById("otpCodeInput")?.value || "").replace(/\s+/g, "");
   state.otpCode = token;
+
   if (!token) {
     state.authError = "Please enter the verification code.";
     render();
@@ -573,7 +1012,7 @@ async function handleOtpResend() {
   if (!isValidEmail(state.email)) {
     state.authError = "Please enter a valid email address.";
     state.authView = state.otpPurpose === "signup" ? "signup" : "login";
-    persistAuthProgress();
+    await persistAuthProgress();
     render();
     return;
   }
@@ -585,14 +1024,15 @@ async function handleOtpResend() {
 
   const errorMessage = await sendAuthOtp(state.otpPurpose);
   state.authLoading = false;
+
   if (errorMessage) {
     state.authError = errorMessage;
-    persistAuthProgress();
+    await persistAuthProgress();
     render();
     return;
   }
 
-  persistAuthProgress();
+  await persistAuthProgress();
   showToast("A new code was sent to your email.");
   render();
 }
@@ -606,11 +1046,15 @@ async function completeAuth(user) {
 
   try {
     const { data: profile } = await getProfile(user.id);
-    if (!profile) {
-      await upsertProfile({ id: user.id, email: user.email });
+    if (profile) {
+      state.profile = profile;
+    } else {
+      const { data: inserted } = await upsertProfile({ id: user.id, email: user.email });
+      state.profile = Array.isArray(inserted) ? inserted[0] : inserted;
     }
   } catch (_error) {
-    /* Clerk user ids are not Supabase auth.users uuids; profile sync is optional. */
+    // Authentication is handled by Clerk on this branch. Supabase profile sync is optional.
+    state.profile = null;
   }
 
   await persistAuthProgress();
@@ -621,137 +1065,74 @@ async function completeAuth(user) {
 async function handleLogout() {
   await signOut();
   state.user = null;
-  state.authView = "login";
+  state.profile = null;
+  state.authView = "welcome";
   state.authError = "";
   state.otpCode = "";
+  state.view = "home";
   await persistAuthProgress();
   showToast("Signed out.");
   render();
 }
 
-function heading(title, subtitle) {
-  return `
-    <div class="view-heading">
-      <button class="back-link" data-back>← Back</button>
-      <h2>${title}</h2>
-      <p>${subtitle}</p>
-    </div>
-  `;
+/* ---------- Small helpers ---------- */
+function friendGlyphs(count) {
+  const visible = Math.max(0, Math.min(count, 3));
+  return `${"♙".repeat(visible)}${count > 3 ? "+" : ""}`;
 }
 
-function wireBack() {
-  const back = content.querySelector("[data-back]");
-  if (back) back.addEventListener("click", () => go("home"));
+function humanizeSetting(key) {
+  return key.replace(/([A-Z])/g, " $1").replace(/^./, char => char.toUpperCase());
 }
 
-function settingLine(title, enabled, key, detail) {
-  return `
-    <div class="settings-line">
-      <div>
-        <strong>${title}</strong>
-        <small>${detail}</small>
-      </div>
-      <button class="switch ${enabled ? "on" : ""}" data-setting="${key}" aria-label="${title}">
-        <span></span>
-      </button>
-    </div>
-  `;
-}
+function iconSvg(type) {
+  const common = `fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"`;
 
-function toggleSharing() {
-  state.timetableSharing = !state.timetableSharing;
-  chrome.storage.local.set({ timetableSharing: state.timetableSharing });
-  render();
-  showToast(state.timetableSharing ? "Timetable sharing turned on." : "Timetable sharing turned off.");
-}
-
-function toggleSetting(key) {
-  state[key] = !state[key];
-  chrome.storage.local.set({ [key]: state[key] });
-  render();
-  showToast(`${prettyKey(key)} ${state[key] ? "enabled" : "disabled"}.`);
-}
-
-function prettyKey(key) {
-  return key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase());
-}
-
-function openNotifications() {
-  state.view = "notifications";
-  state.notificationCount = 0;
-  chrome.storage.local.set({ notificationCount: 0 });
-  chrome.runtime.sendMessage({ type: "SET_BADGE", count: 0 });
-  updateNotificationBadge();
-  render();
-}
-
-function updateNotificationBadge() {
-  notificationDot.textContent = state.notificationCount;
-  notificationDot.style.display = state.notificationCount > 0 ? "grid" : "none";
-}
-
-function openDemoPage() {
-  chrome.tabs.create({ url: chrome.runtime.getURL("demo.html") });
-}
-
-function injectOverlay() {
-  if (!state.currentTab?.id) {
-    showToast("No active tab available.");
-    return;
+  if (type === "subjects") {
+    return `<svg viewBox="0 0 48 44" ${common}>
+      <path d="M7 8l14-5 19 7-15 6L7 8z" />
+      <path d="M7 8v7l18 8 15-7v-6" />
+      <path d="M7 16v7l18 8 15-7v-7" />
+      <path d="M7 24v7l18 8 15-7v-7" />
+    </svg>`;
   }
 
-  const session = MOCK.session;
+  if (type === "people") {
+    return `<svg viewBox="0 0 52 44" ${common}>
+      <circle cx="26" cy="11" r="6" />
+      <circle cx="10" cy="16" r="5" />
+      <circle cx="42" cy="16" r="5" />
+      <path d="M16 37c0-9 4-15 10-15s10 6 10 15" />
+      <path d="M1 37c0-8 3-13 9-13 4 0 7 3 8 7" />
+      <path d="M34 31c1-4 4-7 8-7 6 0 9 5 9 13" />
+    </svg>`;
+  }
 
-  chrome.scripting.executeScript({
-    target: { tabId: state.currentTab.id },
-    func: (sessionData) => {
-      const existing = document.getElementById("fomo-demo-overlay");
-      if (existing) existing.remove();
+  if (type === "book") {
+    return `<svg viewBox="0 0 28 28" ${common}>
+      <path d="M3 5h8c2 0 3 1 3 3v15c0-2-1-3-3-3H3V5z" />
+      <path d="M25 5h-8c-2 0-3 1-3 3v15c0-2 1-3 3-3h8V5z" />
+    </svg>`;
+  }
 
-      const root = document.createElement("div");
-      root.id = "fomo-demo-overlay";
-      root.innerHTML = `
-        <div style="font: 13px/1.35 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                    width:300px;background:#fff;color:#19172a;border:1px solid #e6e1f6;
-                    border-radius:18px;box-shadow:0 18px 50px rgba(36,28,74,.24);overflow:hidden;">
-          <div style="padding:14px 15px;background:linear-gradient(135deg,#34255f,#6d4aff);color:#fff;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-              <strong style="font-size:14px">FOMO</strong>
-              <button id="fomo-close" style="border:0;background:rgba(255,255,255,.15);color:#fff;width:24px;height:24px;border-radius:8px;cursor:pointer">×</button>
-            </div>
-            <div style="margin-top:12px;font-size:11px;opacity:.8">Friends in this session</div>
-            <div style="font-size:16px;font-weight:800;margin-top:2px">${sessionData.subject} · ${sessionData.activity}</div>
-            <div style="font-size:11px;opacity:.8;margin-top:2px">${sessionData.time}</div>
-          </div>
-          <div style="padding:13px 15px;">
-            <div style="font-size:11px;font-weight:800">${sessionData.friends.length} friends are going</div>
-            <div style="font-size:10px;color:#746f89;margin-top:3px">${sessionData.friends.join(" · ")}</div>
-            <button id="fomo-meet" style="width:100%;margin-top:11px;border:0;border-radius:10px;padding:9px;background:#6d4aff;color:#fff;font-size:10px;font-weight:800;cursor:pointer">Suggest a meetup</button>
-          </div>
-        </div>
-      `;
-      Object.assign(root.style, {
-        position: "fixed",
-        right: "22px",
-        bottom: "22px",
-        zIndex: "2147483647"
-      });
-      document.documentElement.appendChild(root);
+  if (type === "seminar") {
+    return `<svg viewBox="0 0 28 28" ${common}>
+      <path d="M4 5h20v14H10l-6 5V5z" />
+      <path d="M8 10h12M8 14h8" />
+    </svg>`;
+  }
 
-      root.querySelector("#fomo-close").addEventListener("click", () => root.remove());
-      root.querySelector("#fomo-meet").addEventListener("click", (event) => {
-        event.currentTarget.textContent = "Meetup request sent ✓";
-        event.currentTarget.style.background = "#1f9d67";
-      });
-    },
-    args: [session]
-  }, () => {
-    if (chrome.runtime.lastError) {
-      showToast("Chrome blocks extensions on this page. Try a normal website tab.");
-    } else {
-      showToast("FOMO overlay added to the page.");
-    }
-  });
+  if (type === "workshop") {
+    return `<svg viewBox="0 0 28 28" ${common}>
+      <path d="M5 4h14l4 4v16H5V4z" />
+      <path d="M9 10h10M9 14h10M9 18h7" />
+    </svg>`;
+  }
+
+  return `<svg viewBox="0 0 28 28" ${common}>
+    <rect x="3" y="6" width="22" height="15" rx="2" />
+    <path d="M9 12l3 3-3 3M14 18h5" />
+  </svg>`;
 }
 
 let toastTimer;
@@ -759,11 +1140,11 @@ function showToast(message) {
   clearTimeout(toastTimer);
   toast.textContent = message;
   toast.classList.add("show");
-  toastTimer = setTimeout(() => toast.classList.remove("show"), 2100);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
 }
 
 function escapeHtml(value) {
-  return String(value)
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")

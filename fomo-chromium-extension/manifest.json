@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "FOMO \u2013 Uni Social Timetable",
   "short_name": "FOMO",
-  "version": "0.1.0",
+  "version": "0.3.1",
   "description": "See friends in classes, find shared free time, and organise meetups without giving up timetable privacy.",
   "permissions": [
     "storage",

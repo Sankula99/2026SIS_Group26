@@ -7,25 +7,17 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <header class="topbar">
-      <button class="brand" id="homeBtn" aria-label="Go home">
-        <span class="brand-mark">F</span>
-        <span>
-          <strong>FOMO</strong>
-          <small>uni, together.</small>
-        </span>
-      </button>
-      <div class="top-actions">
-        <button class="icon-btn notification-button" id="notificationsBtn" title="Notifications">
-          <span aria-hidden="true">♢</span>
-          <span class="badge-dot" id="notificationDot">2</span>
-        </button>
-        <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
-      </div>
-    </header>
-
-    <main id="content" aria-live="polite"></main>
+  <div class="popup-canvas">
+    <div class="notepad-label" aria-hidden="true">FOMO NOTES</div>
+    <div id="paperStack" class="paper-stack theme-yellow">
+      <div class="stack-layer stack-layer-3" aria-hidden="true"></div>
+      <div class="stack-layer stack-layer-2" aria-hidden="true"></div>
+      <div class="stack-layer stack-layer-1" aria-hidden="true"></div>
+      <section class="paper-sheet">
+        <div class="tape" aria-hidden="true"></div>
+        <main id="content" aria-live="polite"></main>
+      </section>
+    </div>
 
     <div id="toast" class="toast" role="status"></div>
   </div>
