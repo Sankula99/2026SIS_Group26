@@ -39,7 +39,26 @@
       "Sam": {
         "Wrk1": "01"
       }
+    },
+
+    //adding more dummy data
+    "41181_SPR_U_1_S": {
+      "Rose": {
+        "Cmp1": "01",
+        "closeFriend": true
+      },
+
+      "Malakai": {
+        "Cmp1": "01",
+        "closeFriend": false
+      },
+
+      "Luna": {
+        "Cmp1": "01",
+        "closeFriend": false
+      }
     }
+    
   };
 
   const PEOPLE_HEADER_TEXT = "People";
@@ -147,6 +166,53 @@
     return matchingPeople.join(", ");
   }
 
+  function getPeopleInfo(timetableKey, activityGroup, activityId) {
+  const subjectPeople = PEOPLE[timetableKey];
+
+  if (!subjectPeople || !activityGroup) {
+    return {
+      totalFriends: 0,
+      closeFriends: [],
+      friends: []
+    };
+  }
+
+    const matchingPeople = Object.entries(subjectPeople)
+      .filter(([, activities]) =>
+        activities?.[activityGroup] === activityId
+      );
+
+    const closeFriends = matchingPeople
+      .filter(([, activities]) => activities?.closeFriend === true)
+      .map(([person]) => person);
+
+    const friends = matchingPeople
+      .filter(([, activities]) => activities?.closeFriend !== true)
+      .map(([person]) => person);
+
+    return {
+      totalFriends: friends.length,
+      closeFriends,
+      friends
+    };
+  }
+
+  function getPeopleIcon(totalFriends) {
+    if (totalFriends === 0) {
+      return "";
+    }
+
+    if (totalFriends === 1) {
+      return "icons/people-one.svg";
+    }
+
+    if (totalFriends < 10) {
+      return "icons/people-two.svg";
+    }
+
+    return "icons/people-many.svg";
+  }
+
   function addPeopleColumnToTable(groupRoot, table) {
     const timetableKey = getTimetableKey(groupRoot);
     const activityGroup = getActivityGroup(groupRoot);
@@ -192,17 +258,49 @@
         row.appendChild(peopleCell);
       }
 
-      // Only write to the DOM when the value actually changed.
-      //
-      // This is important because #group-tpl is watched by a MutationObserver. Reassigning textContent on every observer pass would itself create another mutation, causing an update loop.
-      const peopleText = formatPeople(
+      // Get information about the friends in this activity.
+      const peopleInfo = getPeopleInfo(
         timetableKey,
         activityGroup,
         activityId
       );
 
-      if (peopleCell.textContent !== peopleText) {
-        peopleCell.textContent = peopleText;
+      // Choose the appropriate FOMO icon based on the number of friends.
+      const iconPath = getPeopleIcon(peopleInfo.totalFriends);
+
+      // Show a star if there is at least one close friend.
+      const hasCloseFriend = peopleInfo.closeFriends.length > 0;
+      
+      // Only update the DOM when the icon actually changes.
+      const peopleDisplayKey = `${iconPath}|${hasCloseFriend}`;
+      
+      if (peopleCell.dataset.peopleDisplayKey !== peopleDisplayKey) {
+        peopleCell.innerHTML = "";
+
+        // Add the close-friend star first.
+        if (hasCloseFriend) {
+          const closeFriendIcon = document.createElement("img");
+
+          closeFriendIcon.src = chrome.runtime.getURL("icons/close-friend.svg");
+          closeFriendIcon.alt = "Close friend";
+          closeFriendIcon.className = "mytimetable-close-friend-icon";
+
+          peopleCell.appendChild(closeFriendIcon);
+        }
+        
+        // Add the normal-friend icon.
+        if (iconPath) {
+          const icon = document.createElement("img");
+
+          icon.src = chrome.runtime.getURL(iconPath);
+          icon.alt = `${peopleInfo.totalFriends} friends`;
+          icon.className = "mytimetable-people-icon";
+
+          peopleCell.appendChild(icon);
+        }
+
+        // peopleCell.dataset.peopleIcon = iconPath;
+        peopleCell.dataset.peopleDisplayKey = peopleDisplayKey;
       }
     }
   }
