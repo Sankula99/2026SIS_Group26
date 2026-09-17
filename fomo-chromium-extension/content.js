@@ -13,7 +13,7 @@
    * A person can therefore have one saved activity number for every
    * activity group in the subject, e.g. Lec1, Tut1, Lab1, etc.
    */
-  const PEOPLE = {
+  const DUMMY_PEOPLE = {
     "31005_SPR_U_1_S": {
       "Fred": {
         "Lec1": "01",
@@ -45,6 +45,10 @@
   const PEOPLE_HEADER_TEXT = "People";
   const PEOPLE_HEADER_CLASS = "mytimetable-people-header";
   const PEOPLE_CELL_CLASS = "mytimetable-people-cell";
+
+  // Share in-flight/completed lookups across tables and observer updates.
+  // Results live until page reload; revisit invalidation when the API is added.
+  const peopleRequests = new Map();
 
   let updateScheduled = false;
 
@@ -197,23 +201,30 @@
     return null;
   }
 
-  function formatPeople(timetableKey, activityGroup, activityId) {
-    const subjectPeople = PEOPLE[timetableKey];
+  /**
+   * Retrieve names grouped by activity number for a subject/activity.
+   * @param {string} subject Full timetable key, e.g. "31005_SPR_U_1_S".
+   * @param {string} activityName Activity group name, e.g. "Tut1".
+   * @returns {Promise<Object<string, string[]>>} e.g. { "01": ["Bob"], "03": ["Fred", "Alice"] }.
+   */
+  async function getPeopleByActivity(subject, activityName) {
+    // TODO: call the future stored-user-session API, then use that session to
+    // query Supabase for this subject and activityName. Return the same shape
+    // below, keeping activity numbers as strings to preserve leading zeroes.
+    // Until those APIs exist, adapt the existing dummy data to that contract.
+    const peopleByActivity = Object.create(null);
 
-    if (!subjectPeople || !activityGroup) {
-      return "";
+    for (const [person, activities] of Object.entries(DUMMY_PEOPLE[subject] ?? {})) {
+      const activityNumber = activities[activityName];
+      if (activityNumber) {
+        (peopleByActivity[activityNumber] ??= []).push(person);
+      }
     }
 
-    const matchingPeople = Object.entries(subjectPeople)
-      .filter(([, activities]) =>
-        activities?.[activityGroup] === activityId
-      )
-      .map(([person]) => person);
-
-    return matchingPeople.join(", ");
+    return peopleByActivity;
   }
 
-  function addPeopleColumnToTable(groupRoot, table) {
+  async function addPeopleColumnToTable(groupRoot, table) {
     const timetableKey = getTimetableKey(groupRoot);
     const activityGroup = getActivityGroup(groupRoot);
 
@@ -223,6 +234,33 @@
 
     const headerRow = table.querySelector("thead tr");
     if (!headerRow) {
+      return;
+    }
+
+    const requestKey = JSON.stringify([timetableKey, activityGroup]);
+    let request = peopleRequests.get(requestKey);
+    if (!request) {
+      request = getPeopleByActivity(timetableKey, activityGroup);
+      peopleRequests.set(requestKey, request);
+    }
+
+    let peopleByActivity;
+    try {
+      peopleByActivity = await request;
+    } catch {
+      // Allow a later update to retry, without logging session/API details.
+      if (peopleRequests.get(requestKey) === request) {
+        peopleRequests.delete(requestKey);
+        console.warn("[FOMO] People lookup failed. Try reopening the activity.");
+      }
+      return;
+    }
+
+    // The user may switch subjects/activities or replace the table while waiting.
+    if (!groupRoot.isConnected || !table.isConnected ||
+        !groupRoot.contains(table) || !table.contains(headerRow) ||
+        getTimetableKey(groupRoot) !== timetableKey ||
+        getActivityGroup(groupRoot) !== activityGroup) {
       return;
     }
 
@@ -261,11 +299,7 @@
       // Only write to the DOM when the value actually changed.
       //
       // This is important because #group-tpl is watched by a MutationObserver. Reassigning textContent on every observer pass would itself create another mutation, causing an update loop.
-      const peopleText = formatPeople(
-        timetableKey,
-        activityGroup,
-        activityId
-      );
+      const peopleText = (peopleByActivity[activityId] ?? []).join(", ");
 
       if (peopleCell.textContent !== peopleText) {
         peopleCell.textContent = peopleText;
@@ -288,7 +322,7 @@
       );
 
       for (const table of tables) {
-        addPeopleColumnToTable(groupRoot, table);
+        void addPeopleColumnToTable(groupRoot, table);
       }
     }
   }
