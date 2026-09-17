@@ -65,6 +65,27 @@
   const PEOPLE_HEADER_CLASS = "mytimetable-people-header";
   const PEOPLE_CELL_CLASS = "mytimetable-people-cell";
 
+  // Styles for the FOMO People overlay icons.
+  const FOMO_STYLE = document.createElement("style");
+
+  FOMO_STYLE.textContent = `
+    .mytimetable-people-icon {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      vertical-align: middle;
+    }
+
+    .mytimetable-close-friend-icon {
+      width: 18px;
+      height: 18px;
+      object-fit: contain;
+      vertical-align: middle;
+    }
+  `;
+
+  document.head.appendChild(FOMO_STYLE);
+
   let updateScheduled = false;
 
   /**
@@ -166,6 +187,8 @@
     return matchingPeople.join(", ");
   }
 
+  // Gets information about friends who are enrolled in a specific activity.
+  // Close friends and normal friends are counted separately.
   function getPeopleInfo(timetableKey, activityGroup, activityId) {
   const subjectPeople = PEOPLE[timetableKey];
 
@@ -176,12 +199,13 @@
       friends: []
     };
   }
-
+    // Find all friends who are enrolled in this specific activity.
     const matchingPeople = Object.entries(subjectPeople)
       .filter(([, activities]) =>
         activities?.[activityGroup] === activityId
       );
 
+    // Identify close friends separately from normal friends.
     const closeFriends = matchingPeople
       .filter(([, activities]) => activities?.closeFriend === true)
       .map(([person]) => person);
@@ -197,6 +221,8 @@
     };
   }
 
+  // Selects the People icon based on the number of normal friends in an activity.
+  // No icon is shown when there are no normal friends.
   function getPeopleIcon(totalFriends) {
     if (totalFriends === 0) {
       return "";
@@ -288,7 +314,7 @@
           peopleCell.appendChild(closeFriendIcon);
         }
         
-        // Add the normal-friend icon.
+        // Add the People icon for normal friends.
         if (iconPath) {
           const icon = document.createElement("img");
 
