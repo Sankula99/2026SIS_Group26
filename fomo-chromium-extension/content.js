@@ -339,6 +339,65 @@
     return null;
   }
 
+  // Gets the subject, activity group, and activity ID from the Activity Details page.
+  function getActivityDetailsInfo() {
+    const activityDetails = document.querySelector("#activity-details-tpl");
+
+    if (!activityDetails) {
+      return null;
+    }
+
+    const lowerSection = activityDetails.querySelector(".lower_sec");
+
+    if (!lowerSection) {
+      return null;
+    }
+
+    // The first two divs contain the subject code and subject name.
+    const subjectCode = lowerSection.querySelector("div:nth-child(1) b");
+    
+    if (!subjectCode) {
+      return null;
+    }
+
+    const timetableKey = subjectCode.textContent.trim();
+
+    // Read the activity details from the table.
+    const rows = lowerSection.querySelectorAll("table.aplus-table tbody tr");
+
+    let activityGroup = "";
+    let activityId = "";
+
+    rows.forEach((row) => {
+      const cells = row.querySelectorAll("td");
+
+      if (cells.length < 2) {
+        return;
+      }
+
+      const label = cells[0].textContent.trim();
+      const value = cells[1].textContent.trim();
+
+      if (label === "Group") {
+        activityGroup = value;
+      }
+
+      if (label === "Activity") {
+        activityId = value;
+      }
+    });
+
+    if (!timetableKey || !activityGroup || !activityId) {
+      return null;
+    }
+
+    return {
+      timetableKey,
+      activityGroup,
+      activityId
+    };
+  }
+
   function formatPeople(timetableKey, activityGroup, activityId) {
     const subjectPeople = PEOPLE[timetableKey];
 
@@ -414,7 +473,7 @@
     if (closeFriendCount > 0) {
       return `You have ${closeFriendText} in this activity.`;
     }
-    
+
     // Show only the normal-friend count when there are no close friends.
     if (friendCount > 0) {
       return `You have ${friendText} in this activity.`;
@@ -626,4 +685,5 @@
   }
 
   startObserver();
+
 })();
