@@ -358,15 +358,15 @@
   // Gets information about friends who are enrolled in a specific activity.
   // Close friends and normal friends are counted separately.
   function getPeopleInfo(timetableKey, activityGroup, activityId) {
-  const subjectPeople = PEOPLE[timetableKey];
+    const subjectPeople = PEOPLE[timetableKey];
 
-  if (!subjectPeople || !activityGroup) {
-    return {
-      totalFriends: 0,
-      closeFriends: [],
-      friends: []
-    };
-  }
+    if (!subjectPeople || !activityGroup) {
+      return {
+        totalFriends: 0,
+        closeFriends: [],
+        friends: []
+      };
+    }
     // Find all friends who are enrolled in this specific activity.
     const matchingPeople = Object.entries(subjectPeople)
       .filter(([, activities]) =>
@@ -387,6 +387,40 @@
       closeFriends,
       friends
     };
+  }
+
+  // Creates hover tooltip text showing the number of close and normal friends
+  function getPeopleTooltip(peopleInfo) {
+    const closeFriendCount = peopleInfo.closeFriends.length;
+    const friendCount = peopleInfo.totalFriends;
+
+    // Use singular or plural wording depending on the number of friends.
+    const closeFriendText =
+      closeFriendCount === 1
+        ? "1 close friend"
+        : `${closeFriendCount} close friends`;
+
+    const friendText =
+      friendCount === 1
+        ? "1 friend"
+        : `${friendCount} friends`;
+
+    // Show both counts when the activity contains close and normal friends.
+    if (closeFriendCount > 0 && friendCount > 0) {
+      return `You have ${closeFriendText} and ${friendText} in this activity.`;
+    }
+
+    // Show only the close-friend count when there are no normal friends.
+    if (closeFriendCount > 0) {
+      return `You have ${closeFriendText} in this activity.`;
+    }
+    
+    // Show only the normal-friend count when there are no close friends.
+    if (friendCount > 0) {
+      return `You have ${friendText} in this activity.`;
+    }
+
+    return "You have no friends in this activity.";
   }
 
   // Selects the People icon based on the number of normal friends in an activity.
@@ -458,6 +492,9 @@
         activityGroup,
         activityId
       );
+
+      // Add a tooltip showing the number of close and normal friends.
+      peopleCell.title = getPeopleTooltip(peopleInfo);
 
       // Choose the appropriate FOMO icon based on the number of friends.
       const iconPath = getPeopleIcon(peopleInfo.totalFriends);
