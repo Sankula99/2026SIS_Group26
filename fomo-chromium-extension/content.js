@@ -41,20 +41,174 @@
       }
     },
 
-    //adding more dummy data
+    // Dummy friend data used to test the different People overlay states.
     "41181_SPR_U_1_S": {
-      "Rose": {
-        "Cmp1": "01",
-        "closeFriend": true
-      },
 
-      "Malakai": {
+      // Activity 01: 1 normal friend
+      // Expected: people-one icon
+      "Ava": {
         "Cmp1": "01",
         "closeFriend": false
       },
 
+      // Activity 02: 3 normal friends
+      // Expected: people-two icon
+      "Noah": {
+        "Cmp1": "02",
+        "closeFriend": false
+      },
+      "Mia": {
+        "Cmp1": "02",
+        "closeFriend": false
+      },
+      "Ethan": {
+        "Cmp1": "02",
+        "closeFriend": false
+      },
+
+      // Activity 03: 10 normal friends
+      // Expected: people-many icon
+      "Oliver": {
+        "Cmp1": "03",
+        "closeFriend": false
+      },
+      "Isla": {
+        "Cmp1": "03",
+        "closeFriend": false
+      },
+      "Jack": {
+        "Cmp1": "03",
+        "closeFriend": false
+      },
+      "Grace": {
+        "Cmp1": "03",
+        "closeFriend": false
+      },
+      "Charlie": {
+        "Cmp1": "03",
+        "closeFriend": false
+      },
+      "Amelia": {
+        "Cmp1": "03",
+        "closeFriend": false
+      },
+      "Henry": {
+        "Cmp1": "03",
+        "closeFriend": false
+      },
+      "Ella": {
+        "Cmp1": "03",
+        "closeFriend": false
+      },
+      "William": {
+        "Cmp1": "03",
+        "closeFriend": false
+      },
+      "Chloe": {
+        "Cmp1": "03",
+        "closeFriend": false
+      },
+
+      // Activity 04: 1 close friend and no normal friends
+      // Expected: close-friend star only
+      "Rose": {
+        "Cmp1": "04",
+        "closeFriend": true
+      },
+
+      // Activity 05: 1 close friend + 1 normal friend
+      // Expected: close-friend star + people-one icon
+      "Malakai": {
+        "Cmp1": "05",
+        "closeFriend": true
+      },
       "Luna": {
-        "Cmp1": "01",
+        "Cmp1": "05",
+        "closeFriend": false
+      },
+
+      // Activity 06: 1 close friend + 3 normal friends
+      // Expected: close-friend star + people-two icon
+      "Sofia": {
+        "Cmp1": "06",
+        "closeFriend": true
+      },
+      "Leo": {
+        "Cmp1": "06",
+        "closeFriend": false
+      },
+      "Aria": {
+        "Cmp1": "06",
+        "closeFriend": false
+      },
+      "Finn": {
+        "Cmp1": "06",
+        "closeFriend": false
+      },
+
+      // Activity 07: 2 close friends + 1 normal friend
+      // Expected: close-friend star + people-one icon
+      "Emily": {
+        "Cmp1": "07",
+        "closeFriend": true
+      },
+      "James": {
+        "Cmp1": "07",
+        "closeFriend": true
+      },
+      "Harper": {
+        "Cmp1": "07",
+        "closeFriend": false
+      },
+
+      // Activity 08: 2 close friends + 10 normal friends
+      // Expected: close-friend star + people-many icon
+      "Liam": {
+        "Cmp1": "08",
+        "closeFriend": true
+      },
+      "Charlotte": {
+        "Cmp1": "08",
+        "closeFriend": true
+      },
+      "Lucas": {
+        "Cmp1": "08",
+        "closeFriend": false
+      },
+      "Evie": {
+        "Cmp1": "08",
+        "closeFriend": false
+      },
+      "Daniel": {
+        "Cmp1": "08",
+        "closeFriend": false
+      },
+      "Ruby": {
+        "Cmp1": "08",
+        "closeFriend": false
+      },
+      "Thomas": {
+        "Cmp1": "08",
+        "closeFriend": false
+      },
+      "Isabelle": {
+        "Cmp1": "08",
+        "closeFriend": false
+      },
+      "Oscar": {
+        "Cmp1": "08",
+        "closeFriend": false
+      },
+      "Sophia": {
+        "Cmp1": "08",
+        "closeFriend": false
+      },
+      "Max": {
+        "Cmp1": "08",
+        "closeFriend": false
+      },
+      "Lucy": {
+        "Cmp1": "08",
         "closeFriend": false
       }
     }
@@ -71,6 +225,20 @@
   FOMO_STYLE.textContent = `
     .mytimetable-people-icon {
       width: 24px;
+      height: 24px;
+      object-fit: contain;
+      vertical-align: middle;
+    }
+
+    .mytimetable-people-one-icon {
+      width: 20px;
+      height: 18px;
+      object-fit: contain;
+      vertical-align: middle;
+    }
+
+    .mytimetable-people-many-icon {
+      width: 36px;
       height: 24px;
       object-fit: contain;
       vertical-align: middle;
@@ -320,7 +488,19 @@
 
           icon.src = chrome.runtime.getURL(iconPath);
           icon.alt = `${peopleInfo.totalFriends} friends`;
-          icon.className = "mytimetable-people-icon";
+          
+          // Applying different styling depending on the type of People icon.
+          if (iconPath === "icons/people-many.svg") {
+            icon.className = "mytimetable-people-many-icon";
+          } 
+          
+          else if (iconPath === "icons/people-one.svg") {
+            icon.className = "mytimetable-people-one-icon";
+          } 
+          
+          else {
+            icon.className = "mytimetable-people-icon";
+          }
 
           peopleCell.appendChild(icon);
         }
